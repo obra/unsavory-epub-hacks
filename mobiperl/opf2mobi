@@ -1,0 +1,207 @@
+#!/usr/bin/env perl
+
+#    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    opf2mobi, Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+
+use FindBin qw($RealBin);
+use lib "$RealBin";
+
+use MobiPerl::MobiFile;
+use MobiPerl::Opf;
+use MobiPerl::Config;
+use MobiPerl::LinksInfo;
+
+use Getopt::Mixed;
+use File::Copy;
+use File::Spec;
+
+use Cwd;
+
+
+use vars qw ($opt_title $opt_author $opt_htmlfile $opt_mobifile
+	     $opt_coverimage $opt_noimages
+	     $opt_tocfirst $opt_addcoverlink
+	     $opt_prefixtitle $opt_imagerescale);
+
+Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s
+                            coverimage=s noimages tocfirst addcoverlink
+                            prefixtitle=s imagerescale=s");
+
+
+
+#my @args = map { s/\s/\\ /g; $_ } @ARGV;
+
+#my $command = "html2mobi " . join " ", @args;
+#print STDERR "Command: $command\n";
+#system ($command) == 0 or die "system ($command) failed: $!\n";
+
+
+my $filename = shift;
+
+if (not $filename) {
+    print "Usage: opf2mobi [options] filename\n";
+    print "Options: --title TITLE\n";
+    print "         --author AUTHOR\n";
+    print "         --htmlfile FILENAME\n";
+    print "         --mobifile FILENAME\n";
+    print "         --coverimage FILENAME\n";
+    print "         --prefixtitle PREFIX\n";
+    print "         --noimages\n";
+    print "         --tocfirst\n";
+    print "         --addcoverlink\n";
+    print "         --imagerescale 0|1\n";
+    exit 0;
+}
+
+
+if (not $filename =~ /\.opf$/) {
+    die "File $filename has wrong extension\n";
+}
+
+my $config = new MobiPerl::Config;
+$config->add_cover_link (1) if defined $opt_addcoverlink;
+$config->toc_first (1) if defined $opt_tocfirst;
+$config->no_images (1) if defined $opt_noimages;
+$config->cover_image ($opt_coverimage);
+$config->author ($opt_author);
+$config->title ($opt_title);
+$config->prefix_title ($opt_prefixtitle);
+
+my ($vol,$dir,$basefile) = File::Spec->splitpath ($filename);
+print STDERR "OPFFILE: $vol - $dir - $basefile\n";
+
+my $cwd = getcwd;
+
+print STDERR "CURRENTDIR:$cwd\n";
+
+
+if ("$vol$dir" ne "") {
+    chdir "$vol$dir";
+}
+
+my $mobifile = $basefile;
+
+$mobifile =~ s/\.opf/\.mobi/;
+$mobifile = $opt_mobifile if defined $opt_mobifile;
+
+if ($mobifile eq $basefile) {
+    $mobifile .= ".mobi";
+}
+
+my $rescaleimages = $MobiPerl::Util::rescale_large_images;
+$rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
+
+my $linksinfo = new MobiPerl::LinksInfo;
+
+my $tree = MobiPerl::Util::get_tree_from_opf ($basefile, $config, $linksinfo);
+
+if (defined $opt_htmlfile) {
+    open HTML, ">$opt_htmlfile" or die "Could not open html file $opt_htmlfile: $!\n";
+    print HTML $tree->as_HTML;
+    close HTML;
+}
+
+MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config,
+				    $rescaleimages);
+
+
+move("$mobifile", "$cwd");
+
+
+=pod
+
+=head1 NAME
+
+opf2mobi - A script to convert an opf file to a MobiPocket file
+
+=head1 SYNOPSIS
+
+opf2mobi file.opf
+
+=head1 DESCRIPTION
+
+A script to convert an opf file to a MobiPocket file.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--title TITLE>
+
+Specify the title for the book. This overrides the value given in the
+opf file.
+
+=item B<--prefixtitle PREFIX>
+
+Add a prefix to the title of the book. Useful for specifying number
+for books in series.
+
+=item B<--author AUTHOR>
+
+Specify the author of the book. This overrides the value given in the
+opf file. This value is stored in the EXTH part of record 0.
+
+=item B<--mobifile MOBIFILE>
+
+Name of the output file. This overrides the default value.
+
+=item B<--addcoverlink>
+
+Add link to cover image first in main document.
+
+=item B<--tocfirst>
+
+Make a copy of the toc and place it first.
+
+=item B<--htmlfile HTMLFILE>
+
+Saves the html that is packed into mobi format. This html code contains
+Mobipocket specific things that are added automatically. This is mostly
+useful for debugging.
+
+=item B<--imagerescale 0|1>
+
+Default is rescaling images for them to work on Cybook Gen3. To
+disable this specify --imagerescale 0.
+
+=back
+
+=head1 EXAMPLES
+
+   opt2mobi Alice_In_Wonderland.opf
+
+   opf2mobi --tocfirst --addcoverlink The_Railway_Children.opf
+
+=head1 TODO
+
+   - Extract language information from opf file
+
+=head1 BUGS
+
+
+
+=head1 AUTHOR
+
+Tommy Persson (tpe@ida.liu.se)
+
+=cut
+
+
+
+

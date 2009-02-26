@@ -1,0 +1,306 @@
+#!/usr/bin/env perl
+
+#    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    mobi2ls, Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+use FindBin qw($RealBin);
+use lib "$RealBin";
+
+use Palm::PDB;
+use Palm::Doc;
+use Date::Format;  # for ctime call
+use Getopt::Mixed;
+
+use MobiPerl::MobiHeader; # The MobiHeader package file is in the distribution
+use MobiPerl::Util;
+
+use strict;
+
+use vars qw ($opt_R);
+
+Getopt::Mixed::getOptions ("R");
+
+my $author = "";
+my $publisher = "";
+my $longtitle = "";
+my $type = ""; # Type of the book
+my $creator = ""; # Creator of the book
+
+my $debug = 0;
+
+
+if ($#ARGV < 0) { # No arguments, ls all files in directory
+    lsdir (".");
+} else {
+    foreach my $file (@ARGV) {
+	lsfile ($file);
+    }
+}
+
+sub lsdir {
+    my $dirname = shift;
+    opendir DIR, "$dirname" || die "Could not open dir: $dirname - $!";
+    my @files = readdir(DIR);
+    my  @dirs = ();
+    close DIR;
+    foreach my $file (@files) {
+	my $name = "$dirname/$file";
+	next if ($file eq ".");
+	next if ($file =~ /^\./);
+	next if ($file eq "..");
+	if (-d $name) {
+	    if (defined $opt_R) {
+#		print STDERR "RECURSIVE: $name\n";
+		push @dirs, $name;
+#		lsdir ("$name");
+	    }
+	}
+	if (-f $name) {
+	    if ($name =~ /\.mobi$/i or $name =~ /\.prc$/i) {
+		lsfile ($name);
+	    }
+	}
+    }
+    foreach my $dir (@dirs) {
+	print "\n$dir:\n";
+	lsdir ($dir);
+    }
+}
+
+sub lsfile {
+    my $filename = shift;
+#    print STDERR "lsfile: $filename\n";
+    if (not -f $filename or 
+	not ($filename =~ /\.mobi$/i or $filename =~ /\.prc$/i)) {
+	return;
+    }
+    $author = "NOAUTHOR";
+    $longtitle = "NOTITLE";
+    $type = "";
+    $creator = "";
+    check_file ($filename);
+    print "$author: $longtitle ($filename)\n";
+}
+
+sub check_file {
+
+    my $filename = shift;
+
+    my $pdb = new Palm::PDB;
+    $pdb->Load($filename);
+
+    my $name = $pdb->{"name"};
+    my $version = $pdb->{"version"};
+    $type = $pdb->{"type"};
+    $creator = $pdb->{"creator"};
+    my $seed = $pdb->{"uniqueIDseed"};
+    my $ctime = $pdb->{"ctime"};
+    my $mtime = $pdb->{"mtime"};
+    my $btime = $pdb->{"baktime"};
+    my $sctime = ctime ($ctime);
+    my $smtime = ctime ($mtime);
+    my $sbtime = ctime ($btime);
+
+    if ($debug) {
+	print "Database Name: $name\n";
+	print "      Version: $version\n";
+	print "         Type: $type\n";
+	print "      Creator: $creator\n";
+	print "         Seed: $seed\n";
+	print "        Resdb: " . $pdb->{"attributes"}{"ResDB"} . "\n";
+	print " AppInfoDirty: " . $pdb->{"attributes"}{"AppInfoDirty"} . "\n";
+	print "        ctime: $ctime - $sctime";
+	print "        mtime: $mtime - $smtime";
+	print "      baktime: $btime - $sbtime";
+	print "---------------------------------------------------\n";
+    }
+    
+    my @records = @{$pdb->{"records"}};
+
+
+    my $r0 = $records[0];
+
+    my $ismobi = parse_record_0 ($r0->{"data"});
+    my $palmdocheader = substr ($r0->{"data"}, 0, 16);
+}
+
+
+
+sub parse_record_0 {
+    my $rec = shift;
+    my $res = 0;
+    my $palmdocheader = substr ($rec, 0, 16);
+    parse_palmdoc_header ($palmdocheader);
+    if ($type eq "BOOK" and $creator eq "MOBI") {
+	my $mobiheader = substr ($rec, 16);
+	parse_mobi_header ($mobiheader);
+	$res = 1;
+    }
+    return $res;
+}
+
+
+sub parse_palmdoc_header {
+    my $data = shift;
+    my ($version, $length, $nrecords, $recsize, $unknown) =
+	unpack ("nxxNnnN", $data);
+    if ($debug) {
+	print "PDHEADER  Version: $version\n";
+	print "PDHEADER   Length: $length\n";
+	print "PDHEADER NRecords: $nrecords\n";
+	print "PDHEADER  Recsize: $recsize\n";
+	print "PDHEADER  Unknown: $unknown\n";
+    }
+}
+
+sub parse_mobi_header {
+    my $data = shift;
+    my ($doctype, $length, $type, $codepage, $uniqueid, $ver) =
+	unpack ("a4NNNNN", $data);
+    my ($exthflg) = unpack ("N", substr ($data, 0x70));
+
+    if ($ver > 3) {
+	my ($ciflg, $ciptr) = unpack ("nn", substr ($data, 0xb0));
+	if ($debug) {
+	    print "MOBIHEADER    ciflg: $ciflg\n";
+	    print "MOBIHEADER    ciptr: $ciptr\n";
+	}
+    }
+
+    my $langcode = MobiPerl::MobiHeader::get_mh_language_code ($data);
+    my $lid = $langcode & 0xFF;
+    my $sublid = ($langcode >> 10) & 0xFF;
+
+    my $typedesc = MobiPerl::MobiHeader::get_booktype_desc ($type);
+    my $langdesc = MobiPerl::MobiHeader::get_language_desc ($langcode);
+
+    if ($debug) {
+	print "MOBIHEADER  doctype: $doctype\n";
+	print "MOBIHEADER   length: $length\n";
+	print "MOBIHEADER booktype: $type - $typedesc\n";
+	print "MOBIHEADER    codep: $codepage\n";
+	print "MOBIHEADER   uniqid: $uniqueid\n";
+	print "MOBIHEADER      ver: $ver\n";
+	print "MOBIHEADER  exthflg: $exthflg\n";
+	print "MOBIHEADER language: $langcode - $lid - $sublid - $langdesc\n";
+    }
+
+    if ($exthflg & 0x40) {
+	my $exth = substr ($data, $length);
+	my $eh = new MobiPerl::EXTH ($exth);
+	my $cover_offset = $eh->get_cover_offset ();
+	if ($debug) {
+	    print "COVEROFFSET: $cover_offset\n";
+	}
+	parse_mobi_exth ($exth);
+    }
+    my $title = MobiPerl::MobiHeader::get_extended_title ($data);
+    $longtitle = $title;
+#    print "LONGTITLE: $title\n";
+}
+
+sub parse_mobi_exth {
+    my $data = shift;
+    my ($doctype, $len, $n_items) = unpack ("a4NN", $data);
+    if ($debug) {
+	print "EXTH doctype: $doctype\n";
+	print "EXTH  length: $len\n";
+	print "EXTH n_items: $n_items\n";
+    }
+    my $pos = 12;
+    foreach (1..$n_items) {
+	my ($id, $size) = unpack ("NN", substr ($data, $pos));
+	my $contlen = $size-8;
+	my ($id, $size, $content) = unpack ("NNa$contlen", substr ($data, $pos));
+	my $hid = sprintf ("%x", $id);
+	my $hsize = sprintf ("%x", $size);
+	my $desc = MobiPerl::EXTH::get_description ($id);
+	if (MobiPerl::EXTH::is_binary_data ($id)) {
+	    $content = MobiPerl::Util::iso2hex ($content);
+	}
+	if ($desc eq "Author") {
+	    $author = $content;
+	}
+	if ($debug) {
+	    print "EXTH    item: $id - $desc - $contlen - $content\n";
+	}
+	$pos += $size;
+    }
+}
+
+
+
+=pod
+
+=head1 NAME
+
+mobils - A "ls" program for MobiPocket files
+
+=head1 SYNOPSIS
+
+mobils
+
+mobils -R
+
+mobils file.mobi
+
+mobils file.prc
+
+find . -name "*.prc" -exec mobils \{\} \;
+
+=head1 DESCRIPTION
+
+A "ls" program for MobiPocket files. Currently lists author, title and
+filename.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-R>
+
+Like the -R flag to ls. Recursicely list MobiPocket files.
+
+
+
+=back
+
+=head1 EXAMPLES
+
+  mobils
+
+  mobils -R
+
+  mobils file.mobi
+
+  mobils file.prc
+
+  find . -name "*.prc" -exec mobils \{\} \;
+
+
+=head1 BUGS
+
+=head1 AUTHOR
+
+Tommy Persson (tpe@ida.liu.se)
+
+=cut
+
+
+
+

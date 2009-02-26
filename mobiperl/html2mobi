@@ -1,0 +1,530 @@
+#!/usr/bin/env perl
+
+#    html2mobi, Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use FindBin qw($RealBin);
+use lib "$RealBin";
+
+use MobiPerl::MobiFile;
+use MobiPerl::Opf;
+use MobiPerl::Config;
+use MobiPerl::LinksInfo;
+
+use HTML::TreeBuilder;
+use Getopt::Mixed;
+
+use strict;
+
+use vars qw ($opt_title $opt_author $opt_htmlfile $opt_mobifile $opt_gentoc
+	     $opt_coverimage $opt_addthumbnail $opt_noimages $opt_addcoverlink
+	     $opt_prefixtitle $opt_fixhtml $opt_fixhtmlbr $opt_keepbr 
+	     $opt_imagerescale $opt_removejavascript $opt_scaleallimages);
+
+Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s gentoc
+                            coverimage=s addthumbnail=s noimages addcoverlink
+                            prefixtitle=s fixhtml fixhtmlbr keepbr
+                            removejavascript
+                            scaleallimages=s
+                            imagerescale=s");
+
+#
+# expand html document with links...
+# Generate TOC automatically, guide thingy
+# Getting images to work...
+# Small image in library, 8 record, 180x240 jpeg
+# make testhtmlsgentoc, links in non generatec toc is not working
+#
+#
+# Debian: libpalm-perl
+#         libimage-size-perl
+#
+
+# 8 DWord dwType //pub type: 2=book,3=palmdoc,4=audio,news=257,feed=258,magazin e=259 etc
+# C DWord dwCodepage //1252=western, 65001 = UTF8. Better not use anything else
+
+
+
+my @filenames = @ARGV;
+
+if ($#filenames < 0) {
+    print "Usage: html2mobi [options] filename [filename]*\n";
+    print "Options: --title TITLE\n";
+    print "         --author AUTHOR\n";
+    print "         --htmlfile FILENAME\n";
+    print "         --mobifile FILENAME\n";
+    print "         --coverimage FILENAME\n";
+    print "         --addthumbnail FILENAME\n";
+    print "         --prefixtitle PREFIX\n";
+    print "         --gentoc\n";
+    print "         --noimages\n";
+    print "         --addcoverlink\n";
+    print "         --fixhtml\n";
+    print "         --keepbr\n";
+    print "         --removejavascript\n";
+    print "         --scaleallimages factor\n";
+    print "         --imagerescale 0|1\n";
+    exit 0;
+}
+
+my $tree = 0;
+
+my %file_to_tree = ();
+my %file_to_title = ();
+
+my $namerefindex = 0;
+my %file_to_nameref = ();
+
+my $linksinfo = new MobiPerl::LinksInfo;
+
+my $mobifile = "t.mobi";
+
+my $config = new MobiPerl::Config;
+$config->add_cover_link (1) if defined $opt_addcoverlink;
+$config->no_images (1) if defined $opt_noimages;
+$config->cover_image ($opt_coverimage) if defined $opt_coverimage;
+$config->thumb_image ($opt_addthumbnail) if defined $opt_addthumbnail;
+$config->author ("Unspecified Author");
+$config->author ($opt_author) if defined $opt_author;
+$config->title ($opt_title) if defined $opt_title;
+$config->prefix_title ($opt_prefixtitle);
+$config->remove_java_script (1) if defined $opt_removejavascript;
+$config->{KEEPBR} = 1 if defined $opt_keepbr;
+$config->{SCALEALLIMAGES} = $opt_scaleallimages if defined $opt_scaleallimages;
+
+my $filename = $filenames[0];
+$mobifile = $filename;
+$mobifile =~ s/\.html/\.mobi/;
+$mobifile =~ s/\.htm/\.mobi/;
+
+if ($#filenames == 0) {
+    $tree = one_html_file ($filename);
+} else {
+    if (not defined $opt_title) {
+	$config->title ("dummycollectiontitle")
+    }
+    $tree = get_collection ($config, @filenames);
+}
+
+convert_tree ($tree, $linksinfo);
+
+
+if (defined $opt_htmlfile) {
+    open HTML, ">$opt_htmlfile" or die "Could not open html file $opt_htmlfile: $!\n";
+    my $text = $tree->as_HTML;
+    $text =~ s/&amp\;nbsp\;/&nbsp\;/g;
+    print HTML $text;
+    close HTML;
+}
+
+if (defined $opt_mobifile) {
+    $mobifile = $opt_mobifile;
+}
+
+if ($mobifile eq $filename) {
+    $mobifile .= ".mobi";
+}
+
+my $rescaleimages = $MobiPerl::Util::rescale_large_images;
+$rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
+
+MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config, 
+				    $rescaleimages);
+
+#
+# HTML manipulation functions
+#
+
+
+sub one_html_file {
+    my $filename = shift;
+    print STDERR "ONEHTMLFILE: $filename\n";
+    my $tree = new HTML::TreeBuilder ();
+    $tree->ignore_unknown (0);
+    $tree->parse_file ($filename) || die "Could not find file: $filename\n";
+    return $tree;
+}
+
+sub convert_tree {
+    my $tree = shift;
+    my $linksinfo = shift;
+
+    $linksinfo->check_for_links ($tree);
+
+
+    my $titleelement = $tree->find ("title");
+    if ($titleelement and not $config->title ()) {
+	$config->title ($titleelement->as_trimmed_text ());
+    }
+
+##    print STDERR "T:", $config->title (), ":\n";
+    if (not $config->title ()) {
+	my $title = $filename;
+	$title =~ s/\.html//;
+	$title =~ s/\.htm//;
+	print STDERR "Setting title from filename: $title\n";
+	$config->title ($title);
+    }
+
+    my $title = $config->prefix_title () . $config->title ();
+    $config->title ($title);
+
+    my $coverimage = "";
+    if ($config->cover_image ()) {
+	$coverimage = $config->cover_image ();
+    }
+
+    if ($coverimage) {
+	$linksinfo->add_cover_image ($coverimage);
+	if ($config->add_cover_link ()) {
+	    my $coverp = HTML::Element->new('p', 
+					    id=>"addedcoverlink",
+					    align=>"center");
+	    my $coverimageel = HTML::Element->new('a', 
+						  onclick => 
+						  "document.goto_page_relative(1)");
+	    $coverp->push_content ($coverimageel);
+	    my $el = HTML::Element->new ('img', src => "$coverimage");
+	    $coverimageel->push_content ($el);
+
+	    my $body = $tree->find ("body");
+	    if ($body) {
+		print STDERR "Adding cover link: $coverimage\n";
+		$body->unshift_content ($coverp);
+	    }
+	    $linksinfo->check_for_links ($tree);
+	}
+    }
+
+    if ($config->thumb_image ()) {
+	$linksinfo->add_thumb_image ($config->thumb_image ());
+    } else {
+	if ($coverimage) {
+	    $linksinfo->add_thumb_image ($coverimage);
+	}
+    }
+    
+    MobiPerl::Util::fix_pre_tags ($tree);
+
+    if ($config->remove_java_script ()) {
+	MobiPerl::Util::remove_java_script ($tree);
+    }
+
+    if (defined $opt_fixhtml) {
+	MobiPerl::Util::fix_html ($tree);
+    }
+
+    if (defined $opt_fixhtmlbr) {
+	MobiPerl::Util::fix_html_br ($tree, $config);
+    }
+
+    # Fix links, convert them to filepos
+
+    my @refs = $tree->look_down ("href", qr/^\#/);
+    my @hrefs = ();
+    my @refels = ();
+    my %href_to_ref = ();
+    foreach my $r (@refs) {
+	$r->attr ("filepos", "0000000000");
+	my $key = $r->attr ("href");
+	$key =~ s/\#//g;
+	push @hrefs, $key;
+	push @refels, $r;
+#	$r->attr ("href", undef);
+    }
+
+    my $data = $tree->as_HTML ();
+    foreach my $i (0..$#hrefs) {
+	my $h = $hrefs[$i];
+	my $r = $refels[$i];
+	my $searchfor1 = "id=\"$h\"";
+	my $searchfor2 = "<a name=\"$h\"";
+	
+###	print STDERR "SEARCHFOR1: $searchfor1\n";
+	my $pos = index ($data, $searchfor1);
+	if ($pos >= 0) {
+	    #
+	    # search backwards for <
+	    #
+	    
+	    while (substr ($data, $pos, 1) ne "<") {
+		$pos--;
+	    }
+	    
+##	    $pos -=4; # back 4 positions to get to <h2 id=
+	    my $form = "0" x (10-length($pos)) . "$pos";
+	    print STDERR "POSITION: $pos - $searchfor1 - $form\n";
+	    $r->attr ("filepos", "$form");
+	} else {
+###	    print STDERR "SEARCHFOR2: $searchfor2\n";
+	    $pos = index ($data, $searchfor2);
+	    if ($pos >= 0) {
+		my $form = "0" x (10-length($pos)) . "$pos";
+###		print STDERR "POSITION: $pos - $searchfor2 - $form\n";
+		$r->attr ("filepos", "$form");
+	    } else {
+	    }
+	}
+    }
+    return $tree;
+}
+
+sub get_trees {
+    my @files = @_;
+    my @res = ();
+    foreach my $filename (@files) {
+	my $tree = new HTML::TreeBuilder ();
+	$tree->ignore_unknown (0);
+	$tree->parse_file ($filename) || die "Could not find file: $filename\n";
+	push @res, $tree;
+    }
+    return @res;
+}
+
+sub get_title {
+    my $t = shift;
+    my $res = "";
+    my $titleelement = $t->find ("title");
+    if ($titleelement) {
+	$res = $titleelement->as_trimmed_text ();
+    }
+    return $res;
+}
+
+sub get_titles {
+    my @trees = @_;
+    my @res = ();
+    foreach my $t (@trees) {
+	my $title = get_title ($t);
+	push @res, $title;
+    }
+    return @res;
+}
+
+sub get_toc_tree {
+    my @files = @_;
+    my $res = HTML::Element->new('ul');
+    my @trees = get_trees (@filenames);
+    my @titles = get_titles (@trees);
+    foreach my $i (0..@titles-1) {
+	my $title = $titles[$i];
+	my $file = $files[$i];
+	my $name  = "tocname-" . $namerefindex++;
+
+	$file_to_tree{$file} = $trees[$i];
+	$file_to_title{$file} = $title;
+	$file_to_nameref{$file} = $name;
+
+
+	if (not $title) {
+	    # Not title tag in html file
+	    $title = $file;
+	    $title =~ s/\.html//i;
+	    $title =~ s/\.htm//i;
+	}
+
+	print STDERR "GETTOCTREETITLE: $title - $file - $name\n";
+	my $li = HTML::Element->new('li');
+	my $a = HTML::Element->new('a', href => "\#$name");
+	$a->push_content ($title);
+	$li->push_content ($a);
+	$res->push_content ($li);
+    }
+    return $res;
+}
+
+sub get_collection {
+    my $config = shift;
+    my @files = @_;
+    my $toctree = get_toc_tree (@filenames);
+#    print $toctree->as_HTML;
+
+    my $title = $config->title ();
+
+    my $html = HTML::Element->new('html');
+    my $head = HTML::Element->new('head');
+    my $titleel = HTML::Element->new('title');
+    $titleel->push_content ($title);
+    $head->push_content ($titleel);
+
+    my $body = HTML::Element->new('body',
+				  topmargin => "0",
+				  leftmargin => "0",
+				  bottommargin => "0",
+				  rightmargin => "0");
+   
+
+    # topmargin="1em" leftmargin="2em" bottommargin="0" rightmargin="0"
+
+    #
+    # Title
+    #
+
+    my $h1 = HTML::Element->new('h1');
+    $h1->push_content ($title);
+    $body->push_content ($h1);
+
+    #
+    # Table of content
+    #
+
+    if (defined $opt_gentoc) {
+	my $h2 = HTML::Element->new('h2');
+	$h2->push_content ("TABLE OF CONTENTS");
+	$body->push_content ($h2);
+	$body->push_content ($toctree);
+    }
+
+    #
+    # All files
+    #
+
+    foreach my $file (@files) {
+	print STDERR "ADDING TO COLLECTION: $file\n";
+	my $tree = $file_to_tree{$file};
+	my $title = $file_to_title{$file};
+	my $nameref = $file_to_nameref{$file};
+	my $h2 = HTML::Element->new('h2');
+	my $a = HTML::Element->new('a', name => "$nameref");
+	$a->push_content ("$title");
+	$h2->push_content ($a);
+	$body->push_content ($h2);
+	my $b = $tree->find ("body");
+	$body->push_content ($b->content_list());
+    }
+
+
+
+    $html->push_content ($head);
+    $html->push_content ($body);
+    return $html;
+}
+
+=pod
+
+=head1 NAME
+
+html2mobi - A script to convert html files or a collection of html files
+            to a MobiPocket file
+
+=head1 SYNOPSIS
+
+  html2mobi file.html
+
+  html2mobi file1.html file2.html ... (not tested so much...)
+
+=head1 DESCRIPTION
+
+A script to convert html files or a collection of html files to a
+MobiPocket file
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--title TITLE>
+
+Specify the title for the book. This overrides the value given in the
+html file.
+
+=item B<--prefixtitle PREFIX>
+
+Add a prefix to the title of the book. Useful for specifying number
+for books in series.
+
+=item B<--author AUTHOR>
+
+Specify the author of the book.
+
+=item B<--mobifile MOBIFILE>
+
+Name of the output file. This overrides the default value.
+
+=item B<--htmlfile HTMLFILE>
+
+Saves the html that is packed into mobi format. This html code contains
+Mobipocket specific things that are added automatically. This is mostly
+useful for debugging.
+
+=item B<--coverimage IMAGE>
+
+The image to be used as cover image.
+
+=item B<--addthumbnail IMAGE>
+
+The image to be used as tumb nail. If this flag is not used the specified
+cover image is used.
+
+=item B<--addcoverlink>
+
+Add link to cover image first in main HTML document. This requires the
+--coverimage flag.
+
+=item B<--fixhtmlbr>
+
+Tries to fix html files where two <br> in a row has been used instead of
+<p></p>.
+
+=item B<--keepbr>
+
+Used together with --fixhtmlbr and causes to <br> to be kept so the result
+is a book with space between paragraphs.
+
+=item B<--gentoc>
+
+For a collection of html files generate the table of contents automatically.
+
+=item B<--removejavascript>
+
+Remove Java script code from the html code before saving as a book.
+
+=item B<--scaleallimages factor>
+
+Scale factor to be applied to all images.
+
+=item B<--imagerescale 0|1>
+
+Default is rescaling images for them to work on Cybook Gen3. To
+disable this specify --imagerescale 0.
+
+=back
+
+=head1 EXAMPLES
+
+   html2mobi Alice_In_Wonderland.html
+
+=head1 TODO
+
+   - Specify margins with flags
+
+   - Follow local links when given a root html file
+
+   - Get meta information from somewhere...
+
+   - Include wget
+
+   - News argument (bbc, ....)
+
+=head1 BUGS
+
+=head1 AUTHOR
+
+Tommy Persson (tpe@ida.liu.se)
+
+=cut
+
+
+
+

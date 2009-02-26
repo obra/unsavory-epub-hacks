@@ -1,0 +1,222 @@
+#!/usr/bin/env perl
+
+#    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    lit2mobi, Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+
+use FindBin qw($RealBin);
+use lib "$RealBin";
+
+use MobiPerl::MobiFile;
+use MobiPerl::Opf;
+use MobiPerl::Config;
+use MobiPerl::LinksInfo;
+
+use Getopt::Mixed;
+use File::Copy;
+
+use vars qw ($opt_title $opt_author $opt_htmlfile $opt_mobifile
+	     $opt_coverimage $opt_addthumbnail $opt_noimages
+	     $opt_tocfirst $opt_addcoverlink
+	     $opt_prefixtitle $opt_fixhtml $opt_fixhtmlbr $opt_imagerescale);
+
+Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s
+                            coverimage=s addthumbnail=s 
+                            noimages tocfirst addcoverlink
+                            prefixtitle=s fixhtml fixhtmlbr imagerescale=s");
+
+
+
+#my @args = map { s/\s/\\ /g; $_ } @ARGV;
+
+#my $command = "html2mobi " . join " ", @args;
+#print STDERR "Command: $command\n";
+#system ($command) == 0 or die "system ($command) failed: $!\n";
+
+
+my $filename = shift;
+
+if (not $filename) {
+    print "Usage: lit2mobi [options] filename\n";
+    print "Options: --title TITLE\n";
+    print "         --author AUTHOR\n";
+    print "         --htmlfile FILENAME\n";
+    print "         --mobifile FILENAME\n";
+    print "         --coverimage FILENAME\n";
+    print "         --addthumbnail FILENAME\n";
+    print "         --prefixtitle PREFIX\n";
+    print "         --noimages\n";
+    print "         --tocfirst\n";
+    print "         --addcoverlink\n";
+    print "         --fixhtml\n";
+    print "         --keepbr\n";
+    print "         --imagerescale 0|1\n";
+    exit 0;
+}
+
+if (not $filename =~ /\.lit$/) {
+    die "File $filename has wrong extension\n";
+}
+
+my $config = new MobiPerl::Config;
+$config->add_cover_link (1) if defined $opt_addcoverlink;
+$config->toc_first (1) if defined $opt_tocfirst;
+$config->no_images (1) if defined $opt_noimages;
+$config->cover_image ($opt_coverimage);
+$config->author ($opt_author);
+$config->title ($opt_title);
+$config->prefix_title ($opt_prefixtitle);
+$config->{FIXHTMLBR} = 1 if defined $opt_fixhtmlbr;
+
+MobiPerl::Util::unpack_lit_file ($filename, "ctmp");
+
+my $opffile = $filename;
+my $mobifile = $filename;
+
+$mobifile =~ s/\.lit/\.mobi/;
+$mobifile = $opt_mobifile if defined $opt_mobifile;
+
+if ($mobifile eq $filename) {
+    $mobifile .= ".mobi";
+}
+
+my $rescaleimages = $MobiPerl::Util::rescale_large_images;
+$rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
+
+$opffile =~ s/\.lit/.opf/;
+
+chdir "ctmp";
+
+my $linksinfo = new MobiPerl::LinksInfo;
+
+print STDERR "Read in HTML tree from opf\n";
+my $tree = MobiPerl::Util::get_tree_from_opf ($opffile, $config, $linksinfo);
+print STDERR "Have Read in HTML tree from opf\n";
+
+MobiPerl::Util::fix_pre_tags ($tree);
+
+if (defined $opt_fixhtml) {
+    MobiPerl::Util::fix_html ($tree);
+}
+
+if (defined $opt_htmlfile) {
+    print STDERR "Saving HTML file: $opt_htmlfile\n";
+    open HTML, ">$opt_htmlfile" or die "Could not open html file $opt_htmlfile: $!\n";
+    print HTML $tree->as_HTML;
+    close HTML;
+    move ($opt_htmlfile, "../");
+}
+
+MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config,
+				    $rescaleimages);
+
+move ($mobifile, "../");
+
+
+=pod
+
+=head1 NAME
+
+lit2mobi - A script to convert a lit file to a MobiPocket file
+
+=head1 SYNOPSIS
+
+html2mobi file.lit
+
+=head1 DESCRIPTION
+
+A script to convert a lit file to a MobiPocket file
+
+This requires clit (ConvertLit) to be installed and in the path.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--title TITLE>
+
+Specify the title for the book. This overrides the value given in the
+opf file.
+
+=item B<--prefixtitle PREFIX>
+
+Add a prefix to the title of the book. Useful for specifying number
+for books in series.
+
+=item B<--author AUTHOR>
+
+Specify the author of the book. This overrides the value given in the
+opf file. This value is stored in the EXTH part of record 0.
+
+=item B<--mobifile MOBIFILE>
+
+Name of the output file. This overrides the default value.
+
+=item B<--coverimage IMAGE>
+
+Use IMAGE as cover image instead of possible image found in opf directory.
+
+=item B<--addthumbnail IMAGE>
+
+The image to be used as tumb nail. If this flag is used the cover 
+image is used instead.
+
+=item B<--addcoverlink>
+
+Add link to cover image first in main HTML document. Also add entry
+"Cover" in guide that jumps to the cover image in the HTML document.
+
+=item B<--tocfirst>
+
+Make a copy of the toc and place it first.
+
+=item B<--htmlfile HTMLFILE>
+
+Saves the html that is packed into mobi format. This html code contains
+Mobipocket specific things that are added automatically. This is mostly
+useful for debugging.
+
+=item B<--imagerescale 0|1>
+
+Default is rescaling images for them to work on Cybook Gen3. To
+disable this specify --imagerescale 0.
+
+=back
+
+=head1 EXAMPLES
+
+   lit2mobi Alice_In_Wonderland.lit
+
+   lit2mobi --tocfirst --addcoverlink The_Railway_Children.lit
+
+=head1 TODO
+
+   - Extract language information from opf file
+
+=head1 BUGS
+
+
+=head1 AUTHOR
+
+Tommy Persson (tpe@ida.liu.se)
+
+=cut
+
+
+
+

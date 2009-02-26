@@ -1,0 +1,883 @@
+#!/usr/bin/env perl
+
+#    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    mobi2mobi, Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+use FindBin qw($RealBin);
+use lib "$RealBin";
+
+#
+# TODO:
+#
+# - add extended tags to existing tags, test with I, Robot
+# - perldoc, document which packages are needed
+# - add arbitrary meta information...
+# 
+
+#
+# These packages need to be installed via CPAN or via distribution
+# specific packages.
+#
+
+use Palm::PDB;
+use Palm::Doc;
+use Date::Format;  # for ctime call
+use Getopt::Mixed;
+use Image::Size;   # Used to recognize the first record that is an image
+
+#
+# The ActivePerl ppm packaged corresponding to the above is:
+#
+# p5-Palm
+# TimeDate
+# Getopt-Mixed
+# Image-Size
+#
+
+
+use MobiPerl::MobiHeader; # The MobiHeader package file is in the distribution
+use MobiPerl::Util;
+
+use strict;
+
+use vars qw ($opt_outfile $opt_title $opt_updatedtitle 
+	     $opt_prefixtitle $opt_author $opt_addauthor 
+             $opt_publisher $opt_description $opt_language $opt_subject
+	     $opt_databasename $opt_fiximagesizes
+	     $opt_gen3imagefix
+	     $opt_addthumbnail $opt_coverimage $opt_patch $opt_coveroffset
+	     $opt_exthtype $opt_addexthtype $opt_exthdata $opt_booktype
+	     $opt_delexthtype $opt_delexthindex $opt_mbpfile $opt_savecover $opt_savethumb
+	     $opt_imagerescale);
+
+Getopt::Mixed::getOptions ("outfile=s title=s updatedtitle=s 
+                            prefixtitle=s author=s addauthor=s
+                            description=s language=s subject=s
+                            publisher=s databasename=s patch fiximagesizes
+                            gen3imagefix
+                            exthtype=s addexthtype=s exthdata=s delexthtype=s 
+                            delexthindex=s booktype=s
+                            addthumbnail=s coverimage=s coveroffset=s
+                            mbpfile=s savecover=s savethumb=s imagerescale=s
+                            ");
+
+my $author = "";
+my $addauthor = "";
+my $publisher = "";
+my $description = "";
+my $subject = "";
+my $title = "";
+my $updatedtitle = "";
+
+my $delexthindex = 0;
+$delexthindex = $opt_delexthindex if defined $opt_delexthindex;
+
+#
+# Read info from mbp file
+#
+
+if (defined $opt_mbpfile) {
+    open MBP, "<$opt_mbpfile" or die "Could not open $opt_mbpfile for reading: $!";
+    binmode MBP;
+    my $mbp = "";
+    {
+	undef $/;
+	$mbp = <MBP>;
+	print STDERR "LENGTH: ", length($mbp), "\n";
+    }
+    $author = get_mbp_data ("AUTH", $mbp);
+    my $cover = get_mbp_data ("COVE", $mbp);
+    my $abstract = get_mbp_data ("ABST", $mbp);
+    my $genre = get_mbp_data ("GENR", $mbp);
+    $publisher = get_mbp_data ("PUBL", $mbp);
+    $title = get_mbp_data ("TITL", $mbp);
+
+    print STDERR "Author: $author\n";
+    print STDERR "Title: $title\n";
+    print STDERR "Cover: $cover\n";
+    print STDERR "Abstract: $abstract\n";
+    print STDERR "Genre: $genre\n";
+    print STDERR "Publiser: $publisher\n";
+}
+
+$author = $opt_author if defined $opt_author;
+$addauthor = $opt_addauthor if defined $opt_addauthor;
+$title = $opt_title if defined $opt_title;
+$updatedtitle = $opt_updatedtitle if defined $opt_updatedtitle;
+$publisher = $opt_publisher if defined $opt_publisher;
+$description = $opt_description if defined $opt_description;
+$subject = $opt_subject if defined $opt_subject;
+
+
+#
+# Read mobi file
+#
+
+my $filename = shift;
+
+
+if (not $filename) {
+    print "Usage: mobi2mobi [options] filename\n";
+    print "Options: --outfile FILENAME\n";
+    print "         --title TITLE\n";
+    print "         --updatedtitle TITLE\n";
+    print "         --prefixtitle PREFIX\n";
+    print "         --author AUTHOR\n";
+    print "         --addauthor AUTHOR\n";
+    print "         --description DESCRIPTION\n";
+    print "         --subject SUBJECT\n";
+    print "         --language LANGUAGE\n";
+    print "         --publisher PUBLISHER\n";
+    print "         --databasename NAME\n";
+    print "         --patch\n";
+    print "         --fiximagesize\n";
+    print "         --gen3imagefix\n";
+    print "         --exthtype TYPE\n";
+    print "         --addexthtype TYPE\n";
+    print "         --exthdata DATA\n";
+    print "         --delexthtype TYPE\n";
+    print "         --delexthindex INDEX\n";
+    print "         --booktype TYPE\n";
+    print "         --addthumbnail FILENAME\n";
+    print "         --coverimage FILENAME\n";
+    print "         --coveroffset OFFSET\n";
+    print "         --mbpfile FILENAME\n";
+    print "         --savecover FILENAME\n";
+    print "         --savethumb FILENAME\n";
+    print "         --imagerescale 0|1\n";
+    exit 0;
+}
+
+my $rescaleimages = $MobiPerl::Util::rescale_large_images;
+$rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
+
+my $pdb = new Palm::PDB;
+$pdb->Load($filename);
+
+my $name = $pdb->{"name"};
+my $version = $pdb->{"version"};
+my $type = $pdb->{"type"};
+my $creator = $pdb->{"creator"};
+my $seed = $pdb->{"uniqueIDseed"};
+my $ctime = $pdb->{"ctime"};
+my $mtime = $pdb->{"mtime"};
+my $btime = $pdb->{"baktime"};
+my $sctime = ctime ($ctime);
+my $smtime = ctime ($mtime);
+my $sbtime = ctime ($btime);
+
+print "Database Name: $name\n";
+print "      Version: $version\n";
+print "         Type: $type\n";
+print "      Creator: $creator\n";
+print "         Seed: $seed\n";
+print "        Resdb: " . $pdb->{"attributes"}{"ResDB"} . "\n";
+print " AppInfoDirty: " . $pdb->{"attributes"}{"AppInfoDirty"} . "\n";
+print "        ctime: $ctime - $sctime";
+print "        mtime: $mtime - $smtime";
+print "      baktime: $btime - $sbtime";
+print "---------------------------------------------------\n";
+
+#
+#
+#
+
+$pdb->{"name"} = $opt_databasename if defined $opt_databasename;
+
+my @records = @{$pdb->{"records"}};
+
+
+#
+# Check image sizes and warn if they are to big
+#
+
+my $firstimageid = 0;
+foreach my $r (@records) {
+    my $data = $r->{"data"};
+    my $id = $r->{"id"};
+##    print "CECKING RECORD WITH ID: $id\n";
+    my ($x, $y) = imgsize (\$data);
+    if (defined $x) {
+	my $len = length ($data);
+	if (not $firstimageid) {
+	    print "FIRST IMG Record Id: $id\n";
+	    $firstimageid = $id;
+	}
+	if ($len > 65535) {
+	    print "ERROR:    Record $id - Image data size definitely too large: $len\n";
+	} else {
+	    if ($len > 61000) {
+		print "WARNING:  Record $id - Image data size might be too large: $len\n";
+	    }
+	}
+#	if ($x > 480) {
+#	    print "WARNING: Record $id - Image size $x x $y might be too large due to bug in Gen3\n";
+#	}
+    }
+}
+print "---------------------------------------------------\n";
+
+#
+# Find the first record with an image
+#
+
+my $imgindex = 0;
+my $coverimageindex = 0;
+my $thumbimageindex = 0;
+my $firstimageindex = 0;
+foreach my $r (@records) {
+    my $data = $r->{"data"};
+    my ($x, $y) = imgsize (\$data);
+    if (defined $x) {
+	print "Image record index: $imgindex ($x x $y)\n";
+	$firstimageindex = $imgindex;
+###	$coverimageindex = $imgindex;
+### Do not replace image since you cannot know that the image is a coverimage.
+	last;
+    }
+    $imgindex++;
+}
+print "START IMAGE INDEX: $imgindex\n";
+print "COVER IMAGE INDEX: $firstimageindex\n";
+
+my $r0 = $records[0];
+
+my $ismobi = parse_record_0 ($r0->{"data"});
+my $palmdocheader = substr ($r0->{"data"}, 0, 16);
+
+# pdurrant: these two bytes are sometimes non-zero in Aportis DOC files
+# since we're converting to Mobipocket, force to zero
+substr($palmdocheader,2,2, pack("n",0));
+
+
+my $lastid = $records[$#records]->{"id"};
+
+print "LASTID: $lastid\n";
+
+print "-----------------\n";
+
+
+
+if (defined $opt_outfile) {
+    my $coveroffset = -1;
+    my $thumboffset = -1;
+
+    $coveroffset = $opt_coveroffset if defined $opt_coveroffset;
+
+    if (defined $opt_fiximagesizes) {
+	foreach my $r (@records) {
+	    my $data = $r->{"data"};
+	    my ($x, $y) = imgsize (\$data);
+	    if (defined $x) {
+		open IMG, ">tmpimage";
+		binmode IMG;
+		print IMG $data;
+		close IMG;
+		sleep (1); 
+# Why is this sleep needed? 
+# Without it the wrong file is usesd.
+# I there another way to ensure that the data is available?
+		$r->{"data"} = MobiPerl::Util::get_image_data ("tmpimage");
+	    }
+	}
+    }
+
+    if (defined $opt_gen3imagefix) {
+	foreach my $r (@records) {
+	    my $data = $r->{"data"};
+	    my ($x, $y, $type) = imgsize (\$data);
+#	    if (defined $x and $type eq "JPG") {
+	    if (defined $x) {
+##		print STDERR "GEN3 image fix $type - $x x $y, shrinking image (maybe converting to gif is better...)\n";
+		open IMG, ">tmpimage";
+		binmode IMG;
+		print IMG $data;
+		close IMG;
+		sleep (1);
+		$r->{"data"} = MobiPerl::Util::get_image_data ("tmpimage", 1);
+	    }
+	}
+    }
+
+    if (defined $opt_coverimage) {
+#	if ($coverimageindex != 0) {
+# pdurrant: Sometimes the coverimageindex in the file is -1 for no
+# cover image perl might interpret that as a large positive number, so
+# make sure we skip it.
+	if ($coverimageindex > 0 and $coverimageindex < 65535) {
+
+	    print STDERR "Setting record $coverimageindex to $opt_coverimage\n";
+	    my $data = "";
+	    #
+            # Alaway rescale since the bug seems to be in Gen 3
+	    #
+	    $data = MobiPerl::Util::get_image_data ($opt_coverimage, 
+						    $rescaleimages);
+#	    if ($ismobi) { # only rescale if not a mobi file
+#		$data = MobiPerl::Util::get_image_data ($opt_coverimage, 0);
+#	    } else {
+#		$data = MobiPerl::Util::get_image_data ($opt_coverimage, 1);
+#	    }
+
+	    $pdb->{"records"}->[$coverimageindex]->{"data"} = $data;
+	    $coveroffset = $coverimageindex-$imgindex;
+	} else {
+	    my $img = Palm::PDB->new_Record();
+	    $img->{"categori"} = 0;
+	    $img->{"attributes"}{"Dirty"} = 1;
+	    $lastid++;
+	    print "CREATING COVER IMAGE WITH ID: $lastid\n";
+	    $img->{"id"} = $lastid;
+	    my $data = MobiPerl::Util::get_image_data ($opt_coverimage, 
+						       $rescaleimages);
+	    $img->{"data"} = $data;
+	    $pdb->append_Record ($img);
+	    my @records = @{$pdb->{"records"}};
+	    my $coverindex = $#records;
+	    $coveroffset = $coverindex-$imgindex;
+# pdurrant: if there are no images in the file yet, note that the cover image is first
+	    if ($firstimageindex == 0) {
+	    	$firstimageindex = $coverindex;
+	    }
+	    print "CREATING COVER IMAGE WITH COVEROFFSET: $coveroffset\n";
+	}
+    }
+
+    if (defined $opt_addthumbnail) {
+#	if ($thumbimageindex != 0) {
+
+# pdurrant: Sometimes the thumbimageindex in the file is -1 for no
+# thumb image perl might interpret that as a large positive number, so
+# make sure we skip it.
+
+	if ($thumbimageindex >0 && $thumbimageindex < 65535) {
+
+
+	    print STDERR "Setting record $thumbimageindex to $opt_addthumbnail\n";
+	    my $data = MobiPerl::Util::get_thumb_cover_image_data ($opt_addthumbnail);
+	    $pdb->{"records"}->[$thumbimageindex]->{"data"} = $data;
+	    $thumboffset = $thumbimageindex-$imgindex;
+	} else {
+	    my $img = Palm::PDB->new_Record();
+	    $img->{"categori"} = 0;
+	    $img->{"attributes"}{"Dirty"} = 1;
+	    $lastid++;
+	    $img->{"id"} = $lastid;
+	    my $data = MobiPerl::Util::get_thumb_cover_image_data ($opt_addthumbnail);
+	    $img->{"data"} = $data;
+	    $pdb->append_Record ($img);
+	    my @records = @{$pdb->{"records"}};
+	    my $thumbindex = $#records;
+	    $thumboffset = $thumbindex-$imgindex;
+# if there are no images in the file yet, note that the thumb image is first
+	    if ($firstimageindex == 0) {
+	    	$firstimageindex = $thumbindex;
+	    }
+	    print "CREATING THUMBNAIL IMAGE WITH THUMBNAILOFFSET: $thumboffset\n";
+	}
+    }
+
+    if ($ismobi) {
+	my $mh = substr ($r0->{"data"}, 16);
+
+	if ($author) {
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "author", $author);
+	}
+	if ($addauthor) {
+	    $mh = MobiPerl::MobiHeader::add_exth_data ($mh, "author", $addauthor);
+	}
+	if ($publisher) {
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "publisher", $publisher);
+	}
+	if ($description) {
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "description", $description);
+	}
+	if ($subject) {
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "subject", $subject);
+	}
+	if ($title) {
+	    print STDERR "Setting new title: $title\n";
+	    $mh = MobiPerl::MobiHeader::set_extended_title ($mh, $title);
+	}
+
+	if ($updatedtitle) {
+	    print STDERR "Setting new updated title: $updatedtitle\n";
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "updatedtitle", 
+						       $updatedtitle);
+	}
+
+	if (defined $opt_booktype) {
+	    print STDERR "Setting new booktype: $opt_booktype\n";
+	    $mh = MobiPerl::MobiHeader::set_booktype ($mh, $opt_booktype);
+	}
+
+	if (defined $opt_language) {
+	    print STDERR "Setting new language: $opt_language\n";
+	    $mh = MobiPerl::MobiHeader::set_language_in_header ($mh, $opt_language);
+	}
+
+	if (defined $opt_prefixtitle) {
+	    my $t = MobiPerl::MobiHeader::get_extended_title ($mh);
+	    $t = $opt_prefixtitle . $t;
+	    print STDERR "Setting new title: $t\n";
+	    $mh = MobiPerl::MobiHeader::set_extended_title ($mh, $t);
+	}
+	if (defined $opt_patch) {
+	    my ($imgflg, $imgindex) = unpack ("nn", substr ($mh, 0xb0));
+	    my $newimgindex = $imgindex;
+	    print STDERR "PATCHING IMGINDEX $imgindex -> $newimgindex\n";
+	    substr ($mh, 0xb0, 4, pack ("nn", 0, $newimgindex));
+	}
+	$mh = MobiPerl::MobiHeader::set_exth_data ($mh, "thumboffset", $thumboffset) if ($thumboffset >= 0);
+	$mh = MobiPerl::MobiHeader::set_exth_data ($mh, "coveroffset", $coveroffset) if ($coveroffset >= 0);
+
+	if (defined $opt_exthtype and defined $opt_exthdata) {
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "$opt_exthtype", $opt_exthdata);
+	}
+
+	if (defined $opt_addexthtype and defined $opt_exthdata) {
+	    $mh = MobiPerl::MobiHeader::add_exth_data ($mh, "$opt_addexthtype", $opt_exthdata);
+	}
+
+	if (defined $opt_delexthtype) {
+	    $mh = MobiPerl::MobiHeader::set_exth_data ($mh, "$opt_delexthtype", undef, 0, $delexthindex);
+	}
+	
+# pdurrant: if we know the first image index, note it in the mobi header
+# The CyBook Gen3 uses this as the base for offsets
+	if ($firstimageindex > 0) {
+		substr ($mh, 0x5c, 4, pack ("N", $firstimageindex));
+	}
+
+	$r0->{"data"} = $palmdocheader . $mh;
+    } else {
+	my $mh = new MobiPerl::MobiHeader;
+
+	my $t = $filename;
+	$t =~ s/\.prc$//;
+	$t =~ s/\.pdb$//;
+	$t =~ s/\.mobi$//;
+
+	# remove directory paths from name
+
+	$t =~ s!^.*/!!;
+
+	$t = $title if $title;
+	$t = $opt_prefixtitle . $t if defined $opt_prefixtitle;
+
+	print STDERR "WARNING: Add author do not work for books without EXTH headers, convert to a proper MobiPocket file first\n" 
+	    if $addauthor;
+
+	$mh->set_title ($t);
+	$mh->set_author ($author) if $author;
+	$mh->set_publisher ($publisher) if $publisher;
+	$mh->set_description ($description) if $description;
+	$mh->set_subject ($subject) if $subject;
+	$mh->set_language ($opt_language) if $opt_language;
+#	$mh->set_image_record_index ($imgindex);
+# pdurrant: if we know the first image index, note it in the mobi header
+# The CyBook Gen3 uses this as the base for offsets
+	if ($firstimageindex > 0) {
+		$mh->set_image_record_index ($firstimageindex);
+	}
+
+	$mh->set_thumb_offset ($thumboffset) if ($thumboffset >= 0);
+	$mh->set_cover_offset ($coveroffset) if ($coveroffset >= 0);
+
+	$pdb->{"type"} = "BOOK";
+	$pdb->{"creator"} = "MOBI";
+	
+	$r0->{"data"} = $palmdocheader . $mh->get_data ();
+    }
+
+
+    $pdb->Write ($opt_outfile);
+}
+
+
+sub parse_record_0 {
+    my $rec = shift;
+    my $res = 0;
+    my $palmdocheader = substr ($rec, 0, 16);
+    parse_palmdoc_header ($palmdocheader);
+    if ($type eq "BOOK" and $creator eq "MOBI") {
+	my $mobiheader = substr ($rec, 16);
+	parse_mobi_header ($mobiheader);
+	$res = 1;
+    }
+    return $res;
+}
+
+
+sub parse_palmdoc_header {
+    my $data = shift;
+    my ($version, $length, $nrecords, $recsize, $unknown) =
+	unpack ("nxxNnnN", $data);
+    print "PDHEADER  Version: $version\n";
+    print "PDHEADER   Length: $length\n";
+    print "PDHEADER NRecords: $nrecords\n";
+    print "PDHEADER  Recsize: $recsize\n";
+    print "PDHEADER  Unknown: $unknown\n";
+}
+
+sub parse_mobi_header {
+    my $data = shift;
+    my ($doctype, $length, $type, $codepage, $uniqueid, $ver) =
+	unpack ("a4NNNNN", $data);
+    my ($exthflg) = unpack ("N", substr ($data, 0x70));
+
+    if ($ver > 3) {
+	my ($ciflg, $ciptr) = unpack ("nn", substr ($data, 0xb0));
+	print "MOBIHEADER    ciflg: $ciflg\n";
+	print "MOBIHEADER    ciptr: $ciptr\n";
+    }
+
+    my $langcode = MobiPerl::MobiHeader::get_mh_language_code ($data);
+    my $lid = $langcode & 0xFF;
+    my $sublid = ($langcode >> 10) & 0xFF;
+
+    my $typedesc = MobiPerl::MobiHeader::get_booktype_desc ($type);
+    my $langdesc = MobiPerl::MobiHeader::get_language_desc ($langcode);
+
+    print "MOBIHEADER  doctype: $doctype\n";
+    print "MOBIHEADER   length: $length\n";
+    print "MOBIHEADER booktype: $type - $typedesc\n";
+    print "MOBIHEADER    codep: $codepage\n";
+    print "MOBIHEADER   uniqid: $uniqueid\n";
+    print "MOBIHEADER      ver: $ver\n";
+    print "MOBIHEADER  exthflg: $exthflg\n";
+    print "MOBIHEADER language: $langcode - $lid - $sublid - $langdesc\n";
+
+    if ($exthflg & 0x40) {
+	my $exth = substr ($data, $length);
+
+	my $eh = new MobiPerl::EXTH ($exth);
+	my $cover_offset = $eh->get_cover_offset ();
+	print "COVEROFFSET: $cover_offset\n";
+	my $thumb_offset = $eh->get_thumb_offset ();
+	print "THUMBOFFSET: $thumb_offset\n";
+
+#	if ($cover_offset) {
+# pdurrant: 0 is a valid cover_offset
+	if ($cover_offset >= 0) {
+	    $coverimageindex = $imgindex + $cover_offset;
+	}
+#	if ($thumb_offset) {
+# pdurrant: 0 is a valid thumb_offset
+	if ($thumb_offset >= 0) {
+	    $thumbimageindex = $imgindex + $thumb_offset;
+	}
+
+	if (defined $opt_savecover) {
+	    if ($cover_offset != 0) {
+		my $filename = $opt_savecover;
+		my $r = $records[$coverimageindex];
+		my $data = $r->{"data"};
+		my ($x, $y, $type) = imgsize(\$data);
+		if (not $filename =~ /\./) {
+		    $filename .= "." . lc ($type);
+		}
+		if (defined $x) {
+		    print "Saving cover image $x x $y: $filename\n";
+		    if (open DATA, ">$filename") {
+			binmode (DATA);
+			print DATA $data;
+			close DATA;
+		    } else {
+			print STDERR "Could not save cover: $!";
+		    }
+		} else {
+		    print STDERR "ERROR: Data at cover offset is not an image\n";
+		}
+	    } else {
+		print STDERR "ERROR: No cover image in book\n";
+	    }
+	}
+
+	if (defined $opt_savethumb) {
+	    if ($thumb_offset != 0) {
+		my $filename = $opt_savethumb;
+		my $r = $records[$thumbimageindex];
+		my $data = $r->{"data"};
+		my ($x, $y, $type) = imgsize(\$data);
+		if (not $filename =~ /\./) {
+		    $filename .= "." . lc ($type);
+		}
+		if (defined $x) {
+		    print "Saving cover image $x x $y: $filename\n";
+		    if (open DATA, ">$filename") {
+			binmode (DATA);
+			print DATA $data;
+			close DATA;
+		    } else {
+			print STDERR "Could not save thumb: $!";
+		    }
+		} else {
+		    print STDERR "ERROR: Data at thumb offset is not an image\n";
+		}
+	    } else {
+		print STDERR "ERROR: No thumb image in book\n";
+	    }
+	}
+
+	parse_mobi_exth ($exth);
+    }
+    my $title = MobiPerl::MobiHeader::get_extended_title ($data);
+    print "LONGTITLE: $title\n";
+}
+
+sub parse_mobi_exth {
+    my $data = shift;
+    my ($doctype, $len, $n_items) = unpack ("a4NN", $data);
+    print "EXTH doctype: $doctype\n";
+    print "EXTH  length: $len\n";
+    print "EXTH n_items: $n_items\n";
+    my $pos = 12;
+    foreach (1..$n_items) {
+	my ($id, $size) = unpack ("NN", substr ($data, $pos));
+	$pos += 8;
+	my $contlen = $size-8;
+	my ($content) = unpack ("a$contlen", substr ($data, $pos));
+	my $hid = sprintf ("%x", $id);
+	my $hsize = sprintf ("%x", $size);
+	my $desc = MobiPerl::EXTH::get_description ($id);
+	if (MobiPerl::EXTH::is_binary_data ($id)) {
+	    $content = MobiPerl::Util::iso2hex ($content);
+	}
+	print "EXTH    item: $id - $desc - $contlen - $content\n";
+	$pos += $contlen;
+    }
+}
+
+
+sub get_mbp_data {
+    my $key = shift;
+    my $data = shift;
+    my $res = "";
+    my $d = (split /$key/, $data)[-1];
+    if ($d and $d ne $data) {
+	my ($len) = unpack ("N", $d);
+	($len, $res) = unpack ("Na$len", $d);
+	# Looks like it. Longman mbp abstract has 2013, which is en dash in UTF-16.
+	$res =~ s/\0//g; # coding is probably UTF-16
+    }
+    return $res;
+}
+
+
+=pod
+
+=head1 NAME
+
+mobi2mobi - A program to manipulate mobi files
+
+=head1 SYNOPSIS
+
+mobi2mobi file.mobi
+
+mobi2mobi file.prc
+
+mobi2mobi --outfile out.mobi --prefixtitle "01-" file.mobi
+
+=head1 DESCRIPTION
+
+A program to manipulate MobiPocket files. Author and title can be set
+and a cover image (also thumb nail image for Gen3) can be added.
+
+There are two kind of prc files used for electronic books. One is a
+PalmDOC file which does not have a MOBI header but can contain HTML
+code marked up with MobiPocket specific markup and it can be read by a
+MobiPocket reader. For this format you cannot store meta information
+in the header. The other format is MobiPocket and it has a MOBI header
+and some additional data where you can store meta information and an
+extended title.
+
+This program can change the extended title for a MobiPocket file. It
+can also automatically convert a PalmDOC file to a MobiPocket file and
+set the title.
+
+It can also add author information to a PalmDOC file by converting it
+to a MobiPocket file and set the author meta information. It can also
+change or set the author information for a MobiPocket file.
+
+You can also add a prefix to a title in a MobiPocket file. This does
+not work for PalmDOC files.
+
+It is possible to add an image to the file. If there are no other
+images in the file then the added image will be used as cover image
+and thumb nail image for Cybook Gen3. You can also replace the cover
+image if it already exists.
+
+Just running the program on a mobifile without any flags will print
+some information about the file.
+
+Since there is no specification available for the MOBI header this
+program might generate books that are not entirely correct. So keep the
+original files...
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--databasename NAME>
+
+Change the internal database name of the file (the first 31 characters
+in the file). This may be useful in conjunction with the oeb:redirect
+tag when creating mobi-format ebooks.
+
+=item B<--mbpfile FILE>
+
+Use the author and publisher info in the mbp file and set these in the
+outfile. --author and --publisher overrides this information.
+
+=item B<--title TITLE>
+
+Change the the title of the book.
+
+=item B<--prefixtitle prefix>
+
+Add a prefix to the title of the book.
+
+=item B<--author AUTHOR>
+
+Set the author of the book.
+
+=item B<--addauthor AUTHOR>
+
+Add another author of the book.
+
+=item B<--publisher PUBLISHER>
+
+Set the publisher of the book.
+
+=item B<--description DESCRIPTION>
+
+Set the description of the book.
+
+=item B<--subject SUBJECT>
+
+Set the subject of the book. Can currently only set one subject.
+
+=item B<--language LANGUAGE>
+
+Set the language of the book. LANGUAGE should be a string like "en-gb"
+or a number like 2057.
+
+=item B<--addthumbnail IMAGEFILE>
+
+Add an image that will be used as thumbnail image. If there already is
+a thumb nail image it will be replaced.  The only way for it to be a
+thumb nail image is if the thumb offset is specified in the EXTH data.
+
+=item B<--coverimage IMAGEFILE>
+
+Set the cover image of a book. If there already is a cover image it will
+be replaced. The obly way for it to be a cover image is of the cover offset is
+specified in the EXTH data.
+
+=item B<--savecover FILENAME>
+
+Save the cover image if it exists. If filename is given without
+extension the correct extension will be added.
+
+=item B<--savethumb FILENAME>
+
+Save the thumb nail image if it exists. If filename is given without
+extension the correct extension will be added.
+
+=item B<--fiximagesizes>
+
+Fix image sizes so that they are less then 61000 bytes and rescale
+so they work on the Gen3.
+
+=item B<--gen3imagefix>
+
+Fix image sizes so that they are less then 61000 bytes and rescale
+so they work on the Gen3.
+
+=item B<--coveroffset OFFSET>
+
+Change the offset of the cover image so it points to another image.
+
+=item B<--exthtype TYPE>
+
+The type of the EXTH item you want to change. This is the name of the
+type and the names can be found in MobiPerl/EXTH.pm.
+
+=item B<--addexthtype TYPE>
+
+Add another EXTH entry. TYPE is the name of the type and the names can
+be found in MobiPerl/EXTH.pm.
+
+=item B<--delexthtype TYPE>
+
+Delete all entries in EXTH with type TYPE. TYPE is the name of the
+type and the names can be found in MobiPerl/EXTH.pm.
+
+=item B<--delexthindex INDEX>
+
+Specify that --delexthtype should not delete all items of the type
+TYPE but just delete the first one if INDEX is 1 and the second one if
+INDEX is 2 and so on.
+
+=item B<--exthdata TYPE>
+
+The data of the EXTH item you want to change.
+
+=item B<--outfile FILENAME>
+
+Specifies an output file. Only when this flag is given is any
+conversion done.
+
+=item B<--imagerescale 0|1>
+
+Default is rescaling images for them to work on Cybook Gen3. To
+disable this specify --imagerescale 0.
+
+=back
+
+=head1 EXAMPLES
+
+   mobi2mobi file.mobi
+
+   mobi2mobi --outfile out.mobi --prefixtitle "01-" file.mobi
+
+   mobi2mobi --outfile out.mobi --title "Correction of title" file.mobi
+
+   mobi2mobi --addthumbnail cover.jpg --outfile out.mobi file.mobi
+
+
+=head1 TODO
+
+   - Functionality to change or add other meta information then author.
+
+=head1 BUGS
+
+   - according to the Mobilread thread there is some problem with DRM:ed 
+     files...
+
+
+=head1 AUTHOR
+
+Tommy Persson (tpe@ida.liu.se)
+
+=cut
+
+
+
+
