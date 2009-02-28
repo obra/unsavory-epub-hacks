@@ -17,6 +17,8 @@ package MobiPerl::LinksInfo;
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+                use File::Temp qw/tempfile/;
+                use LWP::Simple;
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
@@ -98,43 +100,41 @@ sub get_n_images {
 sub check_for_links {
     my $self = shift;
     my $html = shift;
-    for (@{$html->extract_links('a', 'img')}) {
-	my($link, $element, $attr, $tag) = @$_;
-	next if ($link =~ /http/);
-	next if ($link =~ /mailto/);
-	next if ($link =~ /www/);
-#	print STDERR "LINK: $tag $link $attr at ", $element->address(), " ";
-	if ($tag eq "a") {
-	    my $filename = $element->as_trimmed_text ();
-##	    print STDERR "LINKEXISTS $filename -> $link - ";
-	    #
-	    # Remove possible prefix file name in link
-	    #
-	    
-	    $link =~ s/^.*\#//;
-##	    print STDERR "$link\n";
+    for ( @{ $html->extract_links(  'img' ) } ) {
+        my ( $link, $element, $attr, $tag ) = @$_;
 
-	    $element->attr("href", "\#$link");
-	    $self->{LINKEXISTS}->{$link} = 1;
-	    next;
-	}
-	if ($tag eq "img") {
-	    my $src = $element->attr("src");
-	    if (-e "$src") {
-		#
-		# Onlys save link if image exists.
-		#
-		$element->attr("src", undef);
-		$self->{RECORDINDEX}++;
-		$element->attr("recindex", sprintf ("%05d", $self->{RECORDINDEX}));
-		$self->{RECORDTOIMAGEFILE}->{$self->{RECORDINDEX}} = $src;
-	    } else {
-		print STDERR "Warning: Image file do not exists: $src\n";
-	    }
-	    next;
-	}
-	print STDERR "LINK: $tag $link $attr at ", $element->address(), " ";
-#	print STDERR $element->as_HTML;
+        #	print STDERR "LINK: $tag $link $attr at ", $element->address(), " ";
+        if ( $tag eq "img" ) {
+            my $src = $element->attr("src");
+            if ( -e "$src" ) {
+
+                #
+                # Onlys save link if image exists.
+                #
+                $element->attr( "src", undef );
+                $self->{RECORDINDEX}++;
+                $element->attr( "recindex", sprintf( "%05d", $self->{RECORDINDEX} ) );
+                $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } = $src;
+            } elsif ($src =~ /^(?:file|https?):/) {
+                eval {;
+                my ($fh, $filename) = tempfile();
+                warn "Fetching $src";
+                my $data = LWP::Simple::get($src);
+                print $fh $data|| die $!;
+                close ($fh);
+                $element->attr( "src", undef );
+                $self->{RECORDINDEX}++;
+                $element->attr( "recindex", sprintf( "%05d", $self->{RECORDINDEX} ) );
+                $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } = $filename;
+            };
+            } else {
+                print STDERR "Warning: Image file do not exists: $src\n";
+            }
+            next;
+        }
+        print STDERR "LINK: $tag $link $attr at ", $element->address(), " ";
+
+        #	print STDERR $element->as_HTML;
     }
 }
 
