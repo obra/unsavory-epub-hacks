@@ -1,0 +1,143 @@
+<?xml version='1.0' encoding='utf-8'?>
+<opf:package xmlns:opf="http://www.idpf.org/2007/opf" xmlns:tei="http://www.tei-c.org/ns/1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" unique-identifier="bookid" version="2.0">
+  <opf:metadata>
+    <dc:title>Metadata document</dc:title>
+    <dc:creator> First Author</dc:creator>
+    <dc:creator> Second Author</dc:creator>
+    <dc:language xsi:type="dcterms:RFC3066">en-US</dc:language>
+    <dc:rights>Public Domain</dc:rights>
+    <dc:publisher>threepress.org</dc:publisher>
+    <dc:subject>Subject 1</dc:subject>
+    <dc:subject>Subject 2</dc:subject>
+    <dc:subject>Subject 3</dc:subject>
+    <dc:identifier id="bookid">urn:uuid:Metadata_Document</dc:identifier>
+  </opf:metadata>
+  <opf:manifest>
+    <opf:item id="ncx" href="toc.ncx" media-type="text/xml"/>
+    <opf:item id="style" href="stylesheet.css" media-type="text/css"/>
+    <opf:item id="chapter-1" href="chapter-1.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-2" href="chapter-2.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-3" href="chapter-3.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-4" href="chapter-4.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-5" href="chapter-5.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-6" href="chapter-6.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-7" href="chapter-7.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-8" href="chapter-8.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-9" href="chapter-9.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-10" href="chapter-10.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-11" href="chapter-11.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-12" href="chapter-12.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-13" href="chapter-13.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-14" href="chapter-14.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-15" href="chapter-15.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-16" href="chapter-16.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-17" href="chapter-17.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-18" href="chapter-18.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-19" href="chapter-19.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-20" href="chapter-20.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-21" href="chapter-21.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-22" href="chapter-22.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-23" href="chapter-23.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-24" href="chapter-24.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-25" href="chapter-25.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-26" href="chapter-26.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-27" href="chapter-27.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-28" href="chapter-28.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-29" href="chapter-29.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-30" href="chapter-30.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-31" href="chapter-31.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-32" href="chapter-32.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-33" href="chapter-33.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-34" href="chapter-34.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-35" href="chapter-35.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-36" href="chapter-36.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-37" href="chapter-37.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-38" href="chapter-38.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-39" href="chapter-39.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-40" href="chapter-40.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-41" href="chapter-41.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-42" href="chapter-42.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-43" href="chapter-43.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-44" href="chapter-44.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-45" href="chapter-45.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-46" href="chapter-46.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-47" href="chapter-47.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-48" href="chapter-48.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-49" href="chapter-49.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-50" href="chapter-50.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-51" href="chapter-51.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-52" href="chapter-52.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-53" href="chapter-53.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-54" href="chapter-54.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-55" href="chapter-55.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-56" href="chapter-56.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-57" href="chapter-57.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-58" href="chapter-58.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-59" href="chapter-59.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-60" href="chapter-60.html" media-type="application/xhtml+xml"/>
+    <opf:item id="chapter-61" href="chapter-61.html" media-type="application/xhtml+xml"/>
+  </opf:manifest>
+  <opf:spine toc="ncx">
+    <opf:itemref idref="chapter-1"/>
+    <opf:itemref idref="chapter-2"/>
+    <opf:itemref idref="chapter-3"/>
+    <opf:itemref idref="chapter-4"/>
+    <opf:itemref idref="chapter-5"/>
+    <opf:itemref idref="chapter-6"/>
+    <opf:itemref idref="chapter-7"/>
+    <opf:itemref idref="chapter-8"/>
+    <opf:itemref idref="chapter-9"/>
+    <opf:itemref idref="chapter-10"/>
+    <opf:itemref idref="chapter-11"/>
+    <opf:itemref idref="chapter-12"/>
+    <opf:itemref idref="chapter-13"/>
+    <opf:itemref idref="chapter-14"/>
+    <opf:itemref idref="chapter-15"/>
+    <opf:itemref idref="chapter-16"/>
+    <opf:itemref idref="chapter-17"/>
+    <opf:itemref idref="chapter-18"/>
+    <opf:itemref idref="chapter-19"/>
+    <opf:itemref idref="chapter-20"/>
+    <opf:itemref idref="chapter-21"/>
+    <opf:itemref idref="chapter-22"/>
+    <opf:itemref idref="chapter-23"/>
+    <opf:itemref idref="chapter-24"/>
+    <opf:itemref idref="chapter-25"/>
+    <opf:itemref idref="chapter-26"/>
+    <opf:itemref idref="chapter-27"/>
+    <opf:itemref idref="chapter-28"/>
+    <opf:itemref idref="chapter-29"/>
+    <opf:itemref idref="chapter-30"/>
+    <opf:itemref idref="chapter-31"/>
+    <opf:itemref idref="chapter-32"/>
+    <opf:itemref idref="chapter-33"/>
+    <opf:itemref idref="chapter-34"/>
+    <opf:itemref idref="chapter-35"/>
+    <opf:itemref idref="chapter-36"/>
+    <opf:itemref idref="chapter-37"/>
+    <opf:itemref idref="chapter-38"/>
+    <opf:itemref idref="chapter-39"/>
+    <opf:itemref idref="chapter-40"/>
+    <opf:itemref idref="chapter-41"/>
+    <opf:itemref idref="chapter-42"/>
+    <opf:itemref idref="chapter-43"/>
+    <opf:itemref idref="chapter-44"/>
+    <opf:itemref idref="chapter-45"/>
+    <opf:itemref idref="chapter-46"/>
+    <opf:itemref idref="chapter-47"/>
+    <opf:itemref idref="chapter-48"/>
+    <opf:itemref idref="chapter-49"/>
+    <opf:itemref idref="chapter-50"/>
+    <opf:itemref idref="chapter-51"/>
+    <opf:itemref idref="chapter-52"/>
+    <opf:itemref idref="chapter-53"/>
+    <opf:itemref idref="chapter-54"/>
+    <opf:itemref idref="chapter-55"/>
+    <opf:itemref idref="chapter-56"/>
+    <opf:itemref idref="chapter-57"/>
+    <opf:itemref idref="chapter-58"/>
+    <opf:itemref idref="chapter-59"/>
+    <opf:itemref idref="chapter-60"/>
+    <opf:itemref idref="chapter-61"/>
+  </opf:spine>
+</opf:package>

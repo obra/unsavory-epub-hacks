@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE ncx PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
+  <!-- An NCX file with a list of illustrations as an additional navList -->
+  <head>
+    <meta name="cover" content="cover"/>
+    <meta name="dtb:uid" content="isbn:9780596528102"/>
+    <meta name="dtb:depth" content="-1"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>BOOK TITLE</text>
+  </docTitle>
+  <navMap>
+    <navPoint xmlns="http://www.daisy.org/z3986/2005/ncx/" id="id865866" playOrder="1">
+      <navLabel>
+        <text>BOOK TITLE LEVEL</text>
+      </navLabel>
+      <content src="index.html"/>
+      <navPoint xmlns="http://www.daisy.org/z3986/2005/ncx/" id="id965292" playOrder="2">
+        <navLabel>
+          <text>PART LEVEL</text>
+        </navLabel>
+        <content src="pr01.html"/>
+        <navPoint xmlns="http://www.daisy.org/z3986/2005/ncx/" id="id965343" playOrder="3">
+          <navLabel>
+            <text>NOT IN NAVIGATION</text>
+          </navLabel>
+          <content src="pr01.html#scope_of_this_book"/>
+        </navPoint>
+      </navPoint>
+    </navPoint>
+  </navMap>
+
+  <navList id="loi">
+   <navLabel><text>List of Illustrations</text></navLabel>
+
+   <navTarget id="loi-cover" playOrder="4">
+      <navLabel><text>image 1</text></navLabel>
+      <content src="image1.html"/>
+   </navTarget>
+
+   <navTarget id="loi-titlepage" playOrder="5">
+      <navLabel><text>image 2</text></navLabel>
+      <content src="image2.html"/>
+   </navTarget>
+  </navList>
+
+  <navList id="recipes">
+   <navLabel><text>List of recipes</text></navLabel>
+
+   <navTarget id="recipe1" playOrder="6">
+      <navLabel><text>recipe 1</text></navLabel>
+      <content src="recipe1.html"/>
+   </navTarget>
+
+   <navTarget id="recipe2" playOrder="7">
+      <navLabel><text>recipe 2</text></navLabel>
+      <content src="recipe2.html"/>
+   </navTarget>
+
+   <navTarget id="recipe3" playOrder="8">
+      <navLabel><text>recipe 3</text></navLabel>
+      <content src="recipe3.html"/>
+   </navTarget>
+  </navList>
+</ncx>

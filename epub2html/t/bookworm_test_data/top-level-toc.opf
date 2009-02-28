@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE package PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid">
+  <metadata>
+    <dc:identifier xmlns:dc="http://purl.org/dc/elements/1.1/" id="bookid">urn:1234</dc:identifier>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Test</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">threepress</dc:creator>
+    <dc:publisher xmlns:dc="http://purl.org/dc/elements/1.1/">threepress</dc:publisher>
+    <dc:language xmlns:dc="http://purl.org/dc/elements/1.1/">en</dc:language>
+    <meta name="cover" content="cover"/>
+  </metadata>
+  <manifest xmlns="http://www.idpf.org/2007/opf">
+    <item id="ncxtoc" media-type="application/x-dtbncx+xml"  href="toc.ncx"/>
+    <item xmlns="http://www.idpf.org/2007/opf" id="cover" href="cover.html" media-type="application/xhtml+xml"/>
+    <item id="htmltoc" media-type="application/xhtml+xml" href="bk01-toc.html"/>
+    <item xmlns="http://www.idpf.org/2007/opf" id="id865866" href="index.html" media-type="application/xhtml+xml"/>
+    <item xmlns="http://www.idpf.org/2007/opf" id="id965292" href="pr01.html" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine xmlns="http://www.idpf.org/2007/opf" toc="ncxtoc">
+    <itemref idref="cover" linear="no"/>
+    <itemref idref="htmltoc" linear="yes"/>
+    <itemref xmlns="http://www.idpf.org/2007/opf" idref="id865866"/>
+    <itemref xmlns="http://www.idpf.org/2007/opf" idref="id965292"/>
+  </spine>
+  <guide xmlns="http://www.idpf.org/2007/opf">
+    <reference href="cover.html" type="cover" title="Cover"/>
+    <reference href="bk01-toc.html" type="toc" title="Table of Contents"/>
+  </guide>
+</package>

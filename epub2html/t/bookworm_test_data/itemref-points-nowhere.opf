@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE package PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid">
+  <metadata>
+    <dc:identifier xmlns:dc="http://purl.org/dc/elements/1.1/" id="bookid">_</dc:identifier>
+    <dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">Test</dc:title>
+    <dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Test</dc:creator>
+    <dc:language xmlns:dc="http://purl.org/dc/elements/1.1/">en</dc:language>
+  </metadata>
+  <manifest xmlns="http://www.idpf.org/2007/opf">
+    <item id="ncxtoc" media-type="application/x-dtbncx+xml" href="toc.ncx"/>
+    <item xmlns="http://www.idpf.org/2007/opf" id="id2849236" href="pt01.html" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine xmlns="http://www.idpf.org/2007/opf" toc="ncxtoc">
+    <itemref xmlns="http://www.idpf.org/2007/opf" idref="id2848976"/>
+  </spine>
+</package>
