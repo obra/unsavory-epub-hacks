@@ -59,7 +59,7 @@ sub flatten_toc {
     my @flat;
     for my $e (@$entries) {
         push @flat, $e;
-        if ($e->{kids}) {
+        if (ref $e->{kids}) {
             push @flat, flatten_toc($e->{kids});
         }
     }
@@ -73,17 +73,17 @@ sub extract_chapters {
     my @entries = flatten_toc($parser->toc->entries);
     my $out     = '';
     for my $id ( 0 .. ($#entries) ) {
-        my $entry = $entries[$id];
-        my $filename  = $entry->{file};
-        warn "Working on chapter $filename";
+        $out .= build_chapter_nav( $id, \@entries );
+        
+        if ( my $filename  = $entries[$id]->{file} ) {
         my $content = Text::ePub::HTMLContent->new(
             epub     => $parser,
             filename => $parser->content_prefix . $filename
         );
         $content->load();
-        $out .= build_chapter_nav( $id, \@entries );
         $out .= warp_xhtml_to_html_section( $content->content_utf8() );
-        $out .= "\n</span>\n";
+        $out .= qq{    <p style="page-break-before: always"/> };
+        }
     }
     return $out;
 }
@@ -118,7 +118,7 @@ sub sub_toc {
     foreach my $entry ( @{ $items } ) {
         $out .= qq{<li><a href="#@{[ $entry->{id}]}">@{[$entry->{label}]}</a>};
 
-    $out .= sub_toc($entry->{kids}  )   if ($entry->{kids});
+    $out .= sub_toc($entry->{kids}  )   if (ref $entry->{kids});
 
 
 
@@ -132,9 +132,11 @@ sub sub_toc {
 sub front_matter {
     my $parser = shift;
 
-    return qq{<h1>@{[$parser->manifest->title]}</h1>\n\n
-    <h2>@{[$parser->manifest->author]}</h2>\n\n
-    <p style="page-break-before: always"/>};
+    return qq{<center><h1 class="title">@{[$parser->manifest->title]}</h1></center>\n\n
+    <p style="page-break-before: always"/>\n\n
+    <center><h2 class="author">@{[$parser->manifest->author]}</h2></center>\n\n
+    <p style="page-break-before: always"/>
+};
 
 }
 
@@ -206,7 +208,6 @@ sub extract_images {
  
         if ( $out_path =~ m|^(.*)/.+$| ) {
             my $subdir = $1;
-            warn "Creating subdir $subdir";
             `mkdir -p $target/$subdir`;
         }
         warn "Writing image $item from ".$parser->content_prefix."($file) " . "to  $target/" . $out_path  if verbose;

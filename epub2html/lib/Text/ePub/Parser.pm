@@ -174,7 +174,6 @@ sub parse {
 
         };
 
-        Text::ePub::Parser::_trace( "Got file ".$file_info->{href}."in the manifest");
         # deal with items that reference anchors in docs like t/bookworm_test_data/天.epub
         $file_info->{file} = Text::ePub::Parser->href_to_file($file_info->{href});
 
@@ -240,6 +239,14 @@ sub get_child_navpoints {
         Text::ePub::Parser::_trace("it became ".$data->{file});
             $data->{kids} = $self->get_child_navpoints($node);
 
+            if (!$data->{kids}->[0]) {
+                delete $data->{kids};
+            } elsif (my $child_content = $data->{kids}->[0]->{href}) {
+                if ($data->{href} eq $child_content )   {
+                    delete $data->{href};
+                    delete $data->{file};
+                }
+            }
 
         push @chapters, $data;
 
@@ -290,15 +297,12 @@ sub content_utf8 {
              my $decoder = guess_encoding($data, 'cp1252', 'latin1');
              # definitely NOT ok
         if  (ref($decoder) ) {
-            warn "Got a decoder".ref($decoder);
             my $utf8 = $decoder->decode($data);
             return $utf8;
         } elsif ($data =~ /^“/m && $data =~ /”$/m) {
                  # if the ebook has ""ed paragraphs in latin 1, it's probably in latin 1.
-            warn "quotes!";
                 return decode('utf-8',$data);
             } else {
-            warn "lose";
             return $data;
             }
 }
