@@ -1,3 +1,5 @@
+use warnings;
+use strict;
 package MobiPerl::LinksInfo;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
@@ -21,11 +23,6 @@ use File::Temp qw/tempfile/;
 use LWP::Simple;
 use FindBin qw($RealBin);
 use lib "$RealBin";
-
-use strict;
-
-###use MobiPerl::Util;
-##use Data::Dumper;
 
 sub new {
     my $this  = shift;

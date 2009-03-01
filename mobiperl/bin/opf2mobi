@@ -18,7 +18,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use strict;
-
+use warnings;
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
@@ -55,17 +55,20 @@ Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s
 my $filename = shift;
 
 if (not $filename) {
-    print "Usage: opf2mobi [options] filename\n";
-    print "Options: --title TITLE\n";
-    print "         --author AUTHOR\n";
-    print "         --htmlfile FILENAME\n";
-    print "         --mobifile FILENAME\n";
-    print "         --coverimage FILENAME\n";
-    print "         --prefixtitle PREFIX\n";
-    print "         --noimages\n";
-    print "         --tocfirst\n";
-    print "         --addcoverlink\n";
-    print "         --imagerescale 0|1\n";
+
+print <<EOF;
+    Usage: opf2mobi [options] filename
+    Options: --title TITLE
+             --author AUTHOR
+             --htmlfile FILENAME
+             --mobifile FILENAME
+             --coverimage FILENAME
+             --prefixtitle PREFIX
+             --noimages
+             --tocfirst
+             --addcoverlink
+             --imagerescale 0|1
+EOF
     exit 0;
 }
 

@@ -1,3 +1,4 @@
+use warnings;
 use strict;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
@@ -66,9 +67,6 @@ use lib "$RealBin";
 
 use MobiPerl::EXTH;
 
-use strict;
-
-#
 # TYPE: 2=book
 #
 # VERSION: Should be 3 or 4

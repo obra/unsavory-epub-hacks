@@ -1,3 +1,5 @@
+use warnings;
+use strict;
 package MobiPerl::Opf;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
@@ -20,14 +22,10 @@ package MobiPerl::Opf;
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
-use strict;
 
 use XML::Parser::Lite::Tree;
 
-#use File::Spec;
-
 use MobiPerl::Util;
-##use Data::Dumper;
 
 sub new {
     my $this  = shift;

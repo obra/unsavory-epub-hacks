@@ -1,3 +1,6 @@
+use warnings;
+use strict;
+
 package MobiPerl::Config;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
@@ -19,8 +22,6 @@ package MobiPerl::Config;
 
 use FindBin qw($RealBin);
 use lib "$RealBin";
-
-use strict;
 
 sub new {
     my $this  = shift;

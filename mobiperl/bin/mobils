@@ -18,6 +18,9 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+use warnings;
+use strict;
+
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
@@ -28,8 +31,6 @@ use Getopt::Mixed;
 
 use MobiPerl::MobiHeader; # The MobiHeader package file is in the distribution
 use MobiPerl::Util;
-
-use strict;
 
 use vars qw ($opt_R);
 

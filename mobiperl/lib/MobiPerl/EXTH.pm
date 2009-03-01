@@ -1,3 +1,5 @@
+use warnings;
+use strict;
 package MobiPerl::EXTH;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
@@ -20,7 +22,6 @@ package MobiPerl::EXTH;
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
-use strict;
 
 # 400-499 application binary
 # 500-599 application string

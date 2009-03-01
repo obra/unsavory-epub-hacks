@@ -7,6 +7,7 @@
 # $Id: Doc.pm,v 1.19 2005/05/12 01:36:49 cpb Exp $
 
 use strict;
+use warnings;
 
 package Palm::Doc;
 

@@ -15,6 +15,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use warnings;
+use strict;
+
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
@@ -26,7 +29,6 @@ use MobiPerl::LinksInfo;
 use HTML::TreeBuilder;
 use Getopt::Mixed;
 
-use strict;
 
 use vars qw ($opt_title $opt_author $opt_htmlfile $opt_mobifile $opt_gentoc
   $opt_coverimage $opt_addthumbnail $opt_noimages $opt_addcoverlink

@@ -1,3 +1,5 @@
+use warnings;
+use strict;
 package MobiPerl::MobiFile;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se

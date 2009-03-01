@@ -1,3 +1,5 @@
+use warnings;
+use strict;
 package MobiPerl::Util;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
@@ -17,7 +19,6 @@ package MobiPerl::Util;
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use strict;
 
 use GD;
 use Image::BMP;
