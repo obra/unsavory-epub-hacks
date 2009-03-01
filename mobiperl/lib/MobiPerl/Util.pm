@@ -542,19 +542,29 @@ sub iso2hex($) {
     return $hex;
 }
 
-sub fix_html {
+sub mobipocket_page_breaks {
+
     my $tree        = shift;
     my @paras       = $tree->find("p");
     my $inside_para = 0;
     my $newp;
-    warn "Fxiing html";
-    foreach my $p (@paras) {
+    foreach my $p (grep { $_->attr('style')} @paras) {
         if ( $p->attr('style') =~ /page-break-before: always/ ) {
             $p->preinsert( HTML::Element->new('mbp:pagebreak') );
         }
         elsif ( $p->attr('style') =~ /page-break-after: always/ ) {
             $p->postinsert( HTML::Element->new('mbp:pagebreak') );
         }
+    }
+}
+
+
+sub fix_html {
+    my $tree        = shift;
+    my @paras       = $tree->find("p");
+    my $inside_para = 0;
+    my $newp;
+    foreach my $p (@paras) {
         if ( not $inside_para ) {
             $newp        = HTML::Element->new("p");
             $inside_para = 1;
@@ -651,7 +661,7 @@ sub fix_pre_tags {
 
 }
 
-sub remove_java_script {
+sub remove_javascript {
     my $tree = shift;
 
     my @scripts = $tree->find("script");
