@@ -41,19 +41,25 @@ unless ($parser->read_epub($epub)) {
     die "Something bad happened while trying to read your book: $@";
 }
 
-my $html_header = build_html_header();
-my $out         = '';
-$out .= front_matter($parser);
-$out .= generate_toc($parser);
-$out .= extract_chapters($parser);
-
-$out = $html_header . "<body>" . $out . "</body></html>";
+my $html_header = 
+my $out = 
+build_html_header().
+"<body>"
+. sectionize(front_matter($parser))
+. sectionize(generate_toc($parser))
+. sectionize(extract_chapters($parser))
+. "</body></html>";
 
 open( my $outfile, ">$target/index.html" ) || die $!;
 print $outfile $out;
 close($outfile);
 
 extract_images($parser);
+
+sub sectionize {
+    my $content = shift;
+    return "<mbp:section>".$content."</mbp:section>";
+}
 
 sub flatten_toc {
     my $entries= shift;
@@ -72,10 +78,9 @@ sub flatten_toc {
 sub extract_chapters {
     my $parser  = shift;
     my @entries = flatten_toc($parser->toc->entries);
-    my $out     = '';
+    my $out     = '<a name="chapters"></a>';
     for my $id ( 0 .. ($#entries) ) {
-        $out .= build_chapter_nav( $id, \@entries );
-        
+        $out     .= qq{<a name="@{[$entries[$id]->{id}]}"><!-- Chapter --></a>};
         if ( my $filename  = $entries[$id]->{file} ) {
         my $content = Text::ePub::HTMLContent->new(
             epub     => $parser,
@@ -83,6 +88,8 @@ sub extract_chapters {
         );
         $content->load();
         $out .= warp_xhtml_to_html_section( $content->content_utf8() );
+
+        $out .= build_chapter_nav( $id, \@entries );
         $out .= qq{    <p style="page-break-before: always"/> };
         }
     }
@@ -93,29 +100,30 @@ sub build_chapter_nav {
     my $id      = shift;
     my @entries = @{ shift @_ };
     my $entry   = $entries[$id];
-    my $out     = qq{<a name="@{[$entry->{id}]}"/><span id="epub2html-@{[$entry->{id}]}"> };
-    $out .= '<div class="nav">';
+    my $out = '<div class="nav">';
     $out .= qq{<a href="#@{[$entries[$id-1]->{id}]}">Previous (@{[$entries[$id-1]->{label}]})</a>}
         if ($id);    #skip 1
-    $out .= ' <a href="#toc">Table of contents</a>';
+    $out .= ' <a href="#contents">Table of contents</a>';
     $out .= qq{ <a href="#@{[$entries[$id+1]->{id}]}">Next (@{[$entries[$id+1]->{label}]})</a>}
         if ( exists $entries[ $id + 1 ] );
-    $out .= "</nav>";
+    $out .= "</div>";
 
 }
 
 sub generate_toc {
     my $parser = shift;
 
-    my $out = q{<a name="toc"/><h2>Table of contents</h2>}.
-       sub_toc ($parser->toc->entries);
+    my $out = q{<div id="toc"><a name="contents"><h2>Table of contents</h2></a>}.
+       sub_toc ($parser->toc->entries)
+       ."</div>";
     return $out;
+    
 }
 
 sub sub_toc {
     my $items = shift;
     my $out;
-    $out .= qq{<ul class="toc">\n};
+    $out .= qq{<ul class="contents">\n};
     foreach my $entry ( @{ $items } ) {
         $out .= qq{<li><a href="#@{[ $entry->{id}]}">@{[$entry->{label}]}</a>};
 
@@ -133,9 +141,18 @@ sub sub_toc {
 sub front_matter {
     my $parser = shift;
 
-    return qq{<center><h1 class="title">@{[$parser->manifest->title]}</h1></center>\n\n
-    <p style="page-break-before: always"/>\n\n
-    <center><h2 class="author">@{[$parser->manifest->author]}</h2></center>\n\n
+    return qq{
+    
+
+    
+    <div id="cover">&nbsp;</div>
+    <div name="title">
+        <center><h1 class="title">@{[$parser->manifest->title]}</h1></center>
+    </div>
+    <p style="page-break-before: always"/>
+    <div name="author">
+        <center><h2 class="author">@{[$parser->manifest->author]}</h2></center>
+    </div>
     <p style="page-break-before: always"/>
 };
 
@@ -144,8 +161,13 @@ sub front_matter {
 sub build_html_header {
 
     my $out
-        = qq{<html xmlns="http://www.w3.org/1999/xhtml" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+        = qq{<html>
 <head>
+    <title>@{[$parser->manifest->title]}</title>
+    <dc:author>@{[$parser->manifest->author]}</dc:author>
+   <guide>
+     <reference type="toc" title="Table of Contents" href="#contents"></reference> 
+    </guide>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
 };
