@@ -47,7 +47,7 @@ sub save_mobi_file {
 
     print STDERR "Saving mobi file (version 4): $filename\n";
 
-    my $mobi = new Palm::Doc;
+    my $mobi = Palm::Doc->new;
     $mobi->{attributes}{"resource"} = 0;
     $mobi->{attributes}{"ResDB"}    = 0;
 
@@ -83,7 +83,7 @@ sub save_mobi_file {
     $header->{'recsize'} = DOC_RECSIZE;
 
     my $body = $html->as_HTML();
-    $body =~ s/&amp\;nbsp\;/&nbsp\;/g;  #fix &nbsp; that fix_pre_tags have added
+    #$body =~ s/&amp\;nbsp\;/&nbsp\;/g;  #fix &nbsp; that fix_pre_tags have added
 
     #    print STDERR "HTMLSIZE: " . length ($body) . "\n";
 
