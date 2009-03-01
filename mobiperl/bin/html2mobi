@@ -101,7 +101,6 @@ $config->add_cover_link(1)              if defined $opt_addcoverlink;
 $config->no_images(1)                   if defined $opt_noimages;
 $config->cover_image($opt_coverimage)   if defined $opt_coverimage;
 $config->thumb_image($opt_addthumbnail) if defined $opt_addthumbnail;
-$config->author("Unspecified Author");
 $config->author($opt_author) if defined $opt_author;
 $config->title($opt_title)   if defined $opt_title;
 $config->prefix_title($opt_prefixtitle);
@@ -168,15 +167,21 @@ sub convert_tree {
 
     $linksinfo->check_for_links($tree);
 
-    my $titleelement = $tree->find("title");
-    if ( $titleelement and not $config->title() ) {
+    if (my  $titleelement = $tree->find("title") and not $config->title() ) {
         $config->title( $titleelement->as_trimmed_text() );
     }
+
+    if (my  $authorelement = $tree->find("dc:author") and not $config->author() ) {
+        $config->author( $authorelement->as_trimmed_text() );
+    } 
+    $config->author("Unspecified Author") unless ($config->author);
+
+
 
     if ( not $config->title() ) {
         my $title = $filename;
         $title =~ s/\.html?$//;
-        print STDERR "Setting title from filename: $title\n";
+        warn "Setting title from filename: $title\n";
         $config->title($title);
     }
 
@@ -222,11 +227,17 @@ sub convert_tree {
 
     MobiPerl::Util::mobipocket_page_breaks($tree);
     MobiPerl::Util::fix_pre_tags($tree);
-    MobiPerl::Util::remove_javascript($tree)
-      if ( $config->remove_javascript() );
+    MobiPerl::Util::remove_javascript($tree) if ( $config->remove_javascript() );
     MobiPerl::Util::fix_html($tree) if ( defined $opt_fixhtml );
     MobiPerl::Util::fix_html_br( $tree, $config ) if ( defined $opt_fixhtmlbr );
+    make_hrefs_filepos($tree);
+    return $tree;
 
+
+}
+
+
+sub make_hrefs_filepos {
     # Fix links, convert them to filepos
 
     my @refs        = $tree->look_down( "href", qr/^\#/ );
@@ -245,9 +256,8 @@ sub convert_tree {
     foreach my $i ( 0 .. $#hrefs ) {
         my $h          = $hrefs[$i];
         my $r          = $refels[$i];
-        my $searchfor1 = "id=\"$h\"";
-        my $searchfor2 = "<a name=\"$h\"";
-
+        my $searchfor1 = qq{id="$h"};
+        my $searchfor2 = qq{<a name="$h"};
         my $pos = index( $data, $searchfor1 );
         if ( $pos >= 0 ) {
 
@@ -258,21 +268,18 @@ sub convert_tree {
             }
 
 ##	    $pos -=4; # back 4 positions to get to <h2 id=
-            my $form = "0" x ( 10 - length($pos) ) . "$pos";
-            print STDERR "POSITION: $pos - $searchfor1 - $form\n";
-            $r->attr( "filepos", "$form" );
+                $r->attr( "filepos", sprintf("%0.10d",$pos));
         }
         else {
             $pos = index( $data, $searchfor2 );
+
             if ( $pos >= 0 ) {
-                my $form = "0" x ( 10 - length($pos) ) . "$pos";
-                $r->attr( "filepos", "$form" );
+                $r->attr( "filepos", sprintf("%0.10d",$pos));
             }
             else {
             }
         }
     }
-    return $tree;
 }
 
 sub get_trees {
@@ -324,7 +331,7 @@ sub get_toc_tree {
             $title =~ s/\.html?$//i;
         }
 
-        print STDERR "GETTOCTREETITLE: $title - $file - $name\n";
+        warn "GETTOCTREETITLE: $title - $file - $name\n";
         my $li = HTML::Element->new('li');
         my $a = HTML::Element->new( 'a', href => "\#$name" );
         $a->push_content($title);
@@ -372,7 +379,7 @@ sub get_collection {
     # All files
 
     foreach my $file (@files) {
-        print STDERR "ADDING TO COLLECTION: $file\n";
+        warn "ADDING TO COLLECTION: $file\n";
         my $tree    = $file_to_tree{$file};
         my $title   = $file_to_title{$file};
         my $nameref = $file_to_nameref{$file};
