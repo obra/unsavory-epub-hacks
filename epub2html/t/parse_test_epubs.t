@@ -13,7 +13,7 @@ find(
         push @test_files, $File::Find::name;
 
     },
-    't/bookworm_test_data'
+    't/bookworm_test_data', 't/epubcheck_test_data'
 );
 
 plan tests => scalar @test_files * 4;
