@@ -29,16 +29,18 @@ use Getopt::Mixed;
 use strict;
 
 use vars qw ($opt_title $opt_author $opt_htmlfile $opt_mobifile $opt_gentoc
-	     $opt_coverimage $opt_addthumbnail $opt_noimages $opt_addcoverlink
-	     $opt_prefixtitle $opt_fixhtml $opt_fixhtmlbr $opt_keepbr 
-	     $opt_imagerescale $opt_removejavascript $opt_scaleallimages);
+  $opt_coverimage $opt_addthumbnail $opt_noimages $opt_addcoverlink
+  $opt_prefixtitle $opt_fixhtml $opt_fixhtmlbr $opt_keepbr
+  $opt_imagerescale $opt_removejavascript $opt_scaleallimages);
 
-Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s gentoc
+Getopt::Mixed::getOptions(
+    "title=s author=s htmlfile=s mobifile=s gentoc
                             coverimage=s addthumbnail=s noimages addcoverlink
                             prefixtitle=s fixhtml fixhtmlbr keepbr
                             removejavascript
                             scaleallimages=s
-                            imagerescale=s");
+                            imagerescale=s"
+);
 
 #
 # expand html document with links...
@@ -55,11 +57,9 @@ Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s gentoc
 # 8 DWord dwType //pub type: 2=book,3=palmdoc,4=audio,news=257,feed=258,magazin e=259 etc
 # C DWord dwCodepage //1252=western, 65001 = UTF8. Better not use anything else
 
-
-
 my @filenames = @ARGV;
 
-if ($#filenames < 0) {
+if ( $#filenames < 0 ) {
     print "Usage: html2mobi [options] filename [filename]*\n";
     print "Options: --title TITLE\n";
     print "         --author AUTHOR\n";
@@ -81,10 +81,10 @@ if ($#filenames < 0) {
 
 my $tree = 0;
 
-my %file_to_tree = ();
+my %file_to_tree  = ();
 my %file_to_title = ();
 
-my $namerefindex = 0;
+my $namerefindex    = 0;
 my %file_to_nameref = ();
 
 my $linksinfo = new MobiPerl::LinksInfo;
@@ -92,15 +92,15 @@ my $linksinfo = new MobiPerl::LinksInfo;
 my $mobifile = "t.mobi";
 
 my $config = new MobiPerl::Config;
-$config->add_cover_link (1) if defined $opt_addcoverlink;
-$config->no_images (1) if defined $opt_noimages;
-$config->cover_image ($opt_coverimage) if defined $opt_coverimage;
-$config->thumb_image ($opt_addthumbnail) if defined $opt_addthumbnail;
-$config->author ("Unspecified Author");
-$config->author ($opt_author) if defined $opt_author;
-$config->title ($opt_title) if defined $opt_title;
-$config->prefix_title ($opt_prefixtitle);
-$config->remove_java_script (1) if defined $opt_removejavascript;
+$config->add_cover_link(1)              if defined $opt_addcoverlink;
+$config->no_images(1)                   if defined $opt_noimages;
+$config->cover_image($opt_coverimage)   if defined $opt_coverimage;
+$config->thumb_image($opt_addthumbnail) if defined $opt_addthumbnail;
+$config->author("Unspecified Author");
+$config->author($opt_author) if defined $opt_author;
+$config->title($opt_title)   if defined $opt_title;
+$config->prefix_title($opt_prefixtitle);
+$config->remove_java_script(1) if defined $opt_removejavascript;
 $config->{KEEPBR} = 1 if defined $opt_keepbr;
 $config->{SCALEALLIMAGES} = $opt_scaleallimages if defined $opt_scaleallimages;
 
@@ -109,257 +109,264 @@ $mobifile = $filename;
 $mobifile =~ s/\.html/\.mobi/;
 $mobifile =~ s/\.htm/\.mobi/;
 
-if ($#filenames == 0) {
+if ( $#filenames == 0 ) {
     use File::Spec;
     my @dir = File::Spec->splitdir($filename);
     pop @dir;
-    chdir (File::Spec->catdir(@dir));  
+    chdir( File::Spec->catdir(@dir) );
 
-    $tree = one_html_file ($filename);
-} else {
-    if (not defined $opt_title) {
-	$config->title ("dummycollectiontitle")
+    $tree = one_html_file($filename);
+}
+else {
+    if ( not defined $opt_title ) {
+        $config->title("dummycollectiontitle");
     }
-    $tree = get_collection ($config, @filenames);
+    $tree = get_collection( $config, @filenames );
 }
 
-convert_tree ($tree, $linksinfo);
+convert_tree( $tree, $linksinfo );
 
-
-if (defined $opt_htmlfile) {
-    open HTML, ">$opt_htmlfile" or die "Could not open html file $opt_htmlfile: $!\n";
+if ( defined $opt_htmlfile ) {
+    open HTML, ">$opt_htmlfile"
+      or die "Could not open html file $opt_htmlfile: $!\n";
     my $text = $tree->as_HTML;
     $text =~ s/&amp\;nbsp\;/&nbsp\;/g;
     print HTML $text;
     close HTML;
 }
 
-if (defined $opt_mobifile) {
+if ( defined $opt_mobifile ) {
     $mobifile = $opt_mobifile;
 }
 
-if ($mobifile eq $filename) {
+if ( $mobifile eq $filename ) {
     $mobifile .= ".mobi";
 }
 
 my $rescaleimages = $MobiPerl::Util::rescale_large_images;
 $rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
 
-MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config, 
-				    $rescaleimages);
+MobiPerl::MobiFile::save_mobi_file( $tree, $mobifile, $linksinfo, $config,
+    $rescaleimages );
 
 #
 # HTML manipulation functions
 #
 
-
 sub one_html_file {
     my $filename = shift;
-    my $tree = new HTML::TreeBuilder ();
-    $tree->ignore_unknown (0);
-    $tree->parse_file ($filename) || die "Could not find file: $filename\n";
+    my $tree     = new HTML::TreeBuilder();
+    $tree->ignore_unknown(0);
+    $tree->parse_file($filename) || die "Could not find file: $filename\n";
     return $tree;
 }
 
 sub convert_tree {
-    my $tree = shift;
+    my $tree      = shift;
     my $linksinfo = shift;
 
-    $linksinfo->check_for_links ($tree);
+    $linksinfo->check_for_links($tree);
 
-
-    my $titleelement = $tree->find ("title");
-    if ($titleelement and not $config->title ()) {
-	$config->title ($titleelement->as_trimmed_text ());
+    my $titleelement = $tree->find("title");
+    if ( $titleelement and not $config->title() ) {
+        $config->title( $titleelement->as_trimmed_text() );
     }
 
-    if (not $config->title ()) {
-	my $title = $filename;
-	$title =~ s/\.html?//;
-	print STDERR "Setting title from filename: $title\n";
-	$config->title ($title);
+    if ( not $config->title() ) {
+        my $title = $filename;
+        $title =~ s/\.html?//;
+        print STDERR "Setting title from filename: $title\n";
+        $config->title($title);
     }
 
-    my $title = $config->prefix_title () . $config->title ();
-    $config->title ($title);
+    my $title = $config->prefix_title() . $config->title();
+    $config->title($title);
 
     my $coverimage = "";
-    if ($config->cover_image ()) {
-	$coverimage = $config->cover_image ();
+    if ( $config->cover_image() ) {
+        $coverimage = $config->cover_image();
     }
 
     if ($coverimage) {
-	$linksinfo->add_cover_image ($coverimage);
-	if ($config->add_cover_link ()) {
-	    my $coverp = HTML::Element->new('p', 
-					    id=>"addedcoverlink",
-					    align=>"center");
-	    my $coverimageel = HTML::Element->new('a', 
-						  onclick => 
-						  "document.goto_page_relative(1)");
-	    $coverp->push_content ($coverimageel);
-	    my $el = HTML::Element->new ('img', src => "$coverimage");
-	    $coverimageel->push_content ($el);
+        $linksinfo->add_cover_image($coverimage);
+        if ( $config->add_cover_link() ) {
+            my $coverp = HTML::Element->new(
+                'p',
+                id    => "addedcoverlink",
+                align => "center"
+            );
+            my $coverimageel =
+              HTML::Element->new( 'a',
+                onclick => "document.goto_page_relative(1)" );
+            $coverp->push_content($coverimageel);
+            my $el = HTML::Element->new( 'img', src => "$coverimage" );
+            $coverimageel->push_content($el);
 
-	    my $body = $tree->find ("body");
-	    if ($body) {
-		$body->unshift_content ($coverp);
-	    }
-	    $linksinfo->check_for_links ($tree);
-	}
+            my $body = $tree->find("body");
+            if ($body) {
+                $body->unshift_content($coverp);
+            }
+            $linksinfo->check_for_links($tree);
+        }
     }
 
-    if ($config->thumb_image ()) {
-	$linksinfo->add_thumb_image ($config->thumb_image ());
-    } else {
-	if ($coverimage) {
-	    $linksinfo->add_thumb_image ($coverimage);
-	}
+    if ( $config->thumb_image() ) {
+        $linksinfo->add_thumb_image( $config->thumb_image() );
     }
-    
-    MobiPerl::Util::fix_pre_tags ($tree);
-
-    if ($config->remove_java_script ()) {
-	MobiPerl::Util::remove_java_script ($tree);
+    else {
+        if ($coverimage) {
+            $linksinfo->add_thumb_image($coverimage);
+        }
     }
 
-    if (defined $opt_fixhtml) {
-	MobiPerl::Util::fix_html ($tree);
+    MobiPerl::Util::fix_pre_tags($tree);
+
+    if ( $config->remove_java_script() ) {
+        MobiPerl::Util::remove_java_script($tree);
     }
 
-    if (defined $opt_fixhtmlbr) {
-	MobiPerl::Util::fix_html_br ($tree, $config);
+    if ( defined $opt_fixhtml ) {
+        MobiPerl::Util::fix_html($tree);
+    }
+
+    if ( defined $opt_fixhtmlbr ) {
+        MobiPerl::Util::fix_html_br( $tree, $config );
     }
 
     # Fix links, convert them to filepos
 
-    my @refs = $tree->look_down ("href", qr/^\#/);
-    my @hrefs = ();
-    my @refels = ();
+    my @refs        = $tree->look_down( "href", qr/^\#/ );
+    my @hrefs       = ();
+    my @refels      = ();
     my %href_to_ref = ();
     foreach my $r (@refs) {
-	$r->attr ("filepos", "0000000000");
-	my $key = $r->attr ("href");
-	$key =~ s/\#//g;
-	push @hrefs, $key;
-	push @refels, $r;
+        $r->attr( "filepos", "0000000000" );
+        my $key = $r->attr("href");
+        $key =~ s/\#//g;
+        push @hrefs,  $key;
+        push @refels, $r;
     }
 
-    my $data = $tree->as_HTML ();
-    foreach my $i (0..$#hrefs) {
-	my $h = $hrefs[$i];
-	my $r = $refels[$i];
-	my $searchfor1 = "id=\"$h\"";
-	my $searchfor2 = "<a name=\"$h\"";
-	
-	my $pos = index ($data, $searchfor1);
-	if ($pos >= 0) {
-	    # search backwards for <
-	    
-	    while (substr ($data, $pos, 1) ne "<") {
-		$pos--;
-	    }
-	    
+    my $data = $tree->as_HTML();
+    foreach my $i ( 0 .. $#hrefs ) {
+        my $h          = $hrefs[$i];
+        my $r          = $refels[$i];
+        my $searchfor1 = "id=\"$h\"";
+        my $searchfor2 = "<a name=\"$h\"";
+
+        my $pos = index( $data, $searchfor1 );
+        if ( $pos >= 0 ) {
+
+            # search backwards for <
+
+            while ( substr( $data, $pos, 1 ) ne "<" ) {
+                $pos--;
+            }
+
 ##	    $pos -=4; # back 4 positions to get to <h2 id=
-	    my $form = "0" x (10-length($pos)) . "$pos";
-	    print STDERR "POSITION: $pos - $searchfor1 - $form\n";
-	    $r->attr ("filepos", "$form");
-	} else {
-	    $pos = index ($data, $searchfor2);
-	    if ($pos >= 0) {
-		my $form = "0" x (10-length($pos)) . "$pos";
-		$r->attr ("filepos", "$form");
-	    } else {
-	    }
-	}
+            my $form = "0" x ( 10 - length($pos) ) . "$pos";
+            print STDERR "POSITION: $pos - $searchfor1 - $form\n";
+            $r->attr( "filepos", "$form" );
+        }
+        else {
+            $pos = index( $data, $searchfor2 );
+            if ( $pos >= 0 ) {
+                my $form = "0" x ( 10 - length($pos) ) . "$pos";
+                $r->attr( "filepos", "$form" );
+            }
+            else {
+            }
+        }
     }
     return $tree;
 }
 
 sub get_trees {
     my @files = @_;
-    my @res = ();
+    my @res   = ();
     foreach my $filename (@files) {
-	my $tree = new HTML::TreeBuilder ();
-	$tree->ignore_unknown (0);
-	$tree->parse_file ($filename) || die "Could not find file: $filename\n";
-	push @res, $tree;
+        my $tree = new HTML::TreeBuilder();
+        $tree->ignore_unknown(0);
+        $tree->parse_file($filename) || die "Could not find file: $filename\n";
+        push @res, $tree;
     }
     return @res;
 }
 
 sub get_title {
-    my $t = shift;
-    my $res = "";
-    my $titleelement = $t->find ("title");
+    my $t            = shift;
+    my $res          = "";
+    my $titleelement = $t->find("title");
     if ($titleelement) {
-	$res = $titleelement->as_trimmed_text ();
+        $res = $titleelement->as_trimmed_text();
     }
     return $res;
 }
 
 sub get_titles {
     my @trees = @_;
-    my @res = ();
+    my @res   = ();
     foreach my $t (@trees) {
-	my $title = get_title ($t);
-	push @res, $title;
+        my $title = get_title($t);
+        push @res, $title;
     }
     return @res;
 }
 
 sub get_toc_tree {
-    my @files = @_;
-    my $res = HTML::Element->new('ul');
-    my @trees = get_trees (@filenames);
-    my @titles = get_titles (@trees);
-    foreach my $i (0..@titles-1) {
-	my $title = $titles[$i];
-	my $file = $files[$i];
-	my $name  = "tocname-" . $namerefindex++;
+    my @files  = @_;
+    my $res    = HTML::Element->new('ul');
+    my @trees  = get_trees(@filenames);
+    my @titles = get_titles(@trees);
+    foreach my $i ( 0 .. @titles - 1 ) {
+        my $title = $titles[$i];
+        my $file  = $files[$i];
+        my $name  = "tocname-" . $namerefindex++;
 
-	$file_to_tree{$file} = $trees[$i];
-	$file_to_title{$file} = $title;
-	$file_to_nameref{$file} = $name;
+        $file_to_tree{$file}    = $trees[$i];
+        $file_to_title{$file}   = $title;
+        $file_to_nameref{$file} = $name;
 
+        if ( not $title ) {
 
-	if (not $title) {
-	    # Not title tag in html file
-	    $title = $file;
-	    $title =~ s/\.html//i;
-	    $title =~ s/\.htm//i;
-	}
+            # Not title tag in html file
+            $title = $file;
+            $title =~ s/\.html//i;
+            $title =~ s/\.htm//i;
+        }
 
-	print STDERR "GETTOCTREETITLE: $title - $file - $name\n";
-	my $li = HTML::Element->new('li');
-	my $a = HTML::Element->new('a', href => "\#$name");
-	$a->push_content ($title);
-	$li->push_content ($a);
-	$res->push_content ($li);
+        print STDERR "GETTOCTREETITLE: $title - $file - $name\n";
+        my $li = HTML::Element->new('li');
+        my $a = HTML::Element->new( 'a', href => "\#$name" );
+        $a->push_content($title);
+        $li->push_content($a);
+        $res->push_content($li);
     }
     return $res;
 }
 
 sub get_collection {
-    my $config = shift;
-    my @files = @_;
-    my $toctree = get_toc_tree (@filenames);
-#    print $toctree->as_HTML;
+    my $config  = shift;
+    my @files   = @_;
+    my $toctree = get_toc_tree(@filenames);
 
-    my $title = $config->title ();
+    #    print $toctree->as_HTML;
 
-    my $html = HTML::Element->new('html');
-    my $head = HTML::Element->new('head');
+    my $title = $config->title();
+
+    my $html    = HTML::Element->new('html');
+    my $head    = HTML::Element->new('head');
     my $titleel = HTML::Element->new('title');
-    $titleel->push_content ($title);
-    $head->push_content ($titleel);
+    $titleel->push_content($title);
+    $head->push_content($titleel);
 
-    my $body = HTML::Element->new('body',
-				  topmargin => "0",
-				  leftmargin => "0",
-				  bottommargin => "0",
-				  rightmargin => "0");
-   
+    my $body = HTML::Element->new(
+        'body',
+        topmargin    => "0",
+        leftmargin   => "0",
+        bottommargin => "0",
+        rightmargin  => "0"
+    );
 
     # topmargin="1em" leftmargin="2em" bottommargin="0" rightmargin="0"
 
@@ -368,18 +375,18 @@ sub get_collection {
     #
 
     my $h1 = HTML::Element->new('h1');
-    $h1->push_content ($title);
-    $body->push_content ($h1);
+    $h1->push_content($title);
+    $body->push_content($h1);
 
     #
     # Table of content
     #
 
-    if (defined $opt_gentoc) {
-	my $h2 = HTML::Element->new('h2');
-	$h2->push_content ("TABLE OF CONTENTS");
-	$body->push_content ($h2);
-	$body->push_content ($toctree);
+    if ( defined $opt_gentoc ) {
+        my $h2 = HTML::Element->new('h2');
+        $h2->push_content("TABLE OF CONTENTS");
+        $body->push_content($h2);
+        $body->push_content($toctree);
     }
 
     #
@@ -387,23 +394,21 @@ sub get_collection {
     #
 
     foreach my $file (@files) {
-	print STDERR "ADDING TO COLLECTION: $file\n";
-	my $tree = $file_to_tree{$file};
-	my $title = $file_to_title{$file};
-	my $nameref = $file_to_nameref{$file};
-	my $h2 = HTML::Element->new('h2');
-	my $a = HTML::Element->new('a', name => "$nameref");
-	$a->push_content ("$title");
-	$h2->push_content ($a);
-	$body->push_content ($h2);
-	my $b = $tree->find ("body");
-	$body->push_content ($b->content_list());
+        print STDERR "ADDING TO COLLECTION: $file\n";
+        my $tree    = $file_to_tree{$file};
+        my $title   = $file_to_title{$file};
+        my $nameref = $file_to_nameref{$file};
+        my $h2      = HTML::Element->new('h2');
+        my $a       = HTML::Element->new( 'a', name => "$nameref" );
+        $a->push_content("$title");
+        $h2->push_content($a);
+        $body->push_content($h2);
+        my $b = $tree->find("body");
+        $body->push_content( $b->content_list() );
     }
 
-
-
-    $html->push_content ($head);
-    $html->push_content ($body);
+    $html->push_content($head);
+    $html->push_content($body);
     return $html;
 }
 
@@ -519,7 +524,4 @@ disable this specify --imagerescale 0.
 Tommy Persson (tpe@ida.liu.se)
 
 =cut
-
-
-
 
