@@ -20,8 +20,6 @@ package MobiPerl::Config;
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use FindBin qw($RealBin);
-use lib "$RealBin";
 
 sub new {
     my $this  = shift;
@@ -134,7 +132,7 @@ sub no_images {
     }
 }
 
-sub remove_java_script {
+sub remove_javascript {
     my $self = shift;
     my $val  = shift;
     if ( defined $val ) {
