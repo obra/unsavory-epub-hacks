@@ -108,8 +108,7 @@ $config->{SCALEALLIMAGES} = $opt_scaleallimages if defined $opt_scaleallimages;
 
 my $filename = $filenames[0];
 $mobifile = $filename;
-$mobifile =~ s/\.html/\.mobi/;
-$mobifile =~ s/\.htm/\.mobi/;
+$mobifile =~ s/\.html?$/\.mobi/;
 
 if ( $#filenames == 0 ) {
     use File::Spec;
