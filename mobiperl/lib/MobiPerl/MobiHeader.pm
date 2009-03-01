@@ -22,10 +22,9 @@ use strict;
 # This is a patch of a function in Palm::Doc to be able to handle
 # DRM:ed files.
 #
-
-package Palm::Doc;
-
-sub _parse_headerrec($) {
+use Palm::Doc;
+{ no warnings 'redefine';
+sub Palm::Doc::_parse_headerrec($) {
     my $record = shift;
     return undef unless exists $record->{'data'};
 
@@ -59,7 +58,7 @@ sub _parse_headerrec($) {
 
     return $record;
 }
-
+}
 package MobiPerl::MobiHeader;
 
 use FindBin qw($RealBin);

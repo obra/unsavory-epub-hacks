@@ -116,7 +116,7 @@ if ( $#filenames == 0 ) {
     pop @dir;
     chdir( File::Spec->catdir(@dir) );
 
-    $tree = one_html_file($filename);
+    $tree = convert_one_html_file($filename);
 }
 else {
     if ( not defined $opt_title ) {
@@ -136,25 +136,19 @@ if ( defined $opt_htmlfile ) {
     close HTML;
 }
 
-if ( defined $opt_mobifile ) {
-    $mobifile = $opt_mobifile;
-}
+    $mobifile = $opt_mobifile if ( defined $opt_mobifile );
+    $mobifile .= ".mobi" if ( $mobifile eq $filename );
 
-if ( $mobifile eq $filename ) {
-    $mobifile .= ".mobi";
-}
-
-my $rescaleimages = $MobiPerl::Util::rescale_large_images;
-$rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
 
 MobiPerl::MobiFile::save_mobi_file( $tree, $mobifile, $linksinfo, $config,
-    $rescaleimages );
+($opt_imagerescale ||$MobiPerl::Util::rescale_large_images)
+);
 
 #
 # HTML manipulation functions
 #
 
-sub one_html_file {
+sub convert_one_html_file {
     my $filename = shift;
     my $tree     = new HTML::TreeBuilder();
     $tree->ignore_unknown(0);
@@ -175,7 +169,7 @@ sub convert_tree {
 
     if ( not $config->title() ) {
         my $title = $filename;
-        $title =~ s/\.html?//;
+        $title =~ s/\.html?$//;
         print STDERR "Setting title from filename: $title\n";
         $config->title($title);
     }
@@ -221,18 +215,10 @@ sub convert_tree {
     }
 
     MobiPerl::Util::fix_pre_tags($tree);
-
-    if ( $config->remove_java_script() ) {
-        MobiPerl::Util::remove_java_script($tree);
-    }
-
-    if ( defined $opt_fixhtml ) {
-        MobiPerl::Util::fix_html($tree);
-    }
-
-    if ( defined $opt_fixhtmlbr ) {
-        MobiPerl::Util::fix_html_br( $tree, $config );
-    }
+        MobiPerl::Util::remove_java_script($tree) if ( $config->remove_java_script() ); 
+        MobiPerl::Util::fix_html($tree) if ( defined $opt_fixhtml ) ;
+        MobiPerl::Util::fix_html_br( $tree, $config ) if ( defined $opt_fixhtmlbr ) ;
+    
 
     # Fix links, convert them to filepos
 
@@ -297,8 +283,7 @@ sub get_trees {
 sub get_title {
     my $t            = shift;
     my $res          = "";
-    my $titleelement = $t->find("title");
-    if ($titleelement) {
+    if (my $titleelement = $t->find("title") ){
         $res = $titleelement->as_trimmed_text();
     }
     return $res;
@@ -307,10 +292,7 @@ sub get_title {
 sub get_titles {
     my @trees = @_;
     my @res   = ();
-    foreach my $t (@trees) {
-        my $title = get_title($t);
-        push @res, $title;
-    }
+        push @res, get_title($_) for (@trees);
     return @res;
 }
 
@@ -332,8 +314,7 @@ sub get_toc_tree {
 
             # Not title tag in html file
             $title = $file;
-            $title =~ s/\.html//i;
-            $title =~ s/\.htm//i;
+            $title =~ s/\.html?$//i;
         }
 
         print STDERR "GETTOCTREETITLE: $title - $file - $name\n";
@@ -412,8 +393,6 @@ sub get_collection {
     $html->push_content($body);
     return $html;
 }
-
-=pod
 
 =head1 NAME
 
