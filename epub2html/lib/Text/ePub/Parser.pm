@@ -129,7 +129,7 @@ sub parse_toc {
 }
 
 sub _trace {
-    # warn join(' ', @_);
+     #warn join(' ', @_);
 }
 
 sub _get_parser { 
@@ -174,6 +174,7 @@ sub parse {
 
         };
 
+        Text::ePub::Parser::_trace( "Got file ".$file_info->{href}."in the manifest");
         # deal with items that reference anchors in docs like t/bookworm_test_data/天.epub
         $file_info->{file} = Text::ePub::Parser->href_to_file($file_info->{href});
 
@@ -215,23 +216,37 @@ sub parse {
     $self->title($title);
 
 
-    my $nodes = $xp->find('/ncx/navMap/navPoint');
+    my $node = $xp->find('/ncx/navMap')->shift;
+    my @chapters = @{$self->get_child_navpoints($node)};
+
+    $self->entries([sort {$a->{order} <=> $b->{order}} @chapters]);
+
+}
+
+
+sub get_child_navpoints {
+       my $self = shift;
+        my $root  = shift;
+        my $nodes=$root->find ('./navPoint');
     my @chapters;
+ 
     foreach my $node ( $nodes->get_nodelist ) {
             my $data = {  id => $node->getAttribute('id'),
             order => $node->getAttribute('playOrder'),
             href => $node->find('content')->[0]->getAttribute('src'),
             label => $node->find('navLabel/text')->string_value};
-
+        Text::ePub::Parser::_trace("Found an item ".$data->{href});
         $data->{file} = Text::ePub::Parser->href_to_file($data->{href});
+        Text::ePub::Parser::_trace("it became ".$data->{file});
+            $data->{kids} = $self->get_child_navpoints($node);
+
 
         push @chapters, $data;
 
-    } 
+    }
+        return \@chapters; 
+    }
 
-    $self->entries([sort {$a->{order} <=> $b->{order}} @chapters]);
-
-}
 
 no Mouse;
 
@@ -263,6 +278,29 @@ sub load {
     $file =~ s|^/+||;
     $self->raw_content( $self->epub->zip->contents( $file ) ) || die "Couldn't load file ".$file;
 
+}
+
+sub content_utf8 {
+    my $self = shift;
+                 use Encode::Guess;
+                use Encode;
+             # perhaps ok
+    my $data = $self->raw_content();
+
+             my $decoder = guess_encoding($data, 'cp1252', 'latin1');
+             # definitely NOT ok
+        if  (ref($decoder) ) {
+            warn "Got a decoder".ref($decoder);
+            my $utf8 = $decoder->decode($data);
+            return $utf8;
+        } elsif ($data =~ /^“/m && $data =~ /”$/m) {
+                 # if the ebook has ""ed paragraphs in latin 1, it's probably in latin 1.
+            warn "quotes!";
+                return decode('utf-8',$data);
+            } else {
+            warn "lose";
+            return $data;
+            }
 }
 
 no Mouse;

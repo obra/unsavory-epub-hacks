@@ -54,20 +54,35 @@ close($outfile);
 
 extract_images($parser);
 
+sub flatten_toc {
+    my $entries= shift;
+    my @flat;
+    for my $e (@$entries) {
+        push @flat, $e;
+        if ($e->{kids}) {
+            push @flat, flatten_toc($e->{kids});
+        }
+    }
+
+    return @flat;
+}
+
+
 sub extract_chapters {
     my $parser  = shift;
-    my @entries = @{ $parser->toc->entries };
+    my @entries = flatten_toc($parser->toc->entries);
     my $out     = '';
     for my $id ( 0 .. ($#entries) ) {
         my $entry = $entries[$id];
         my $filename  = $entry->{file};
+        warn "Working on chapter $filename";
         my $content = Text::ePub::HTMLContent->new(
             epub     => $parser,
             filename => $parser->content_prefix . $filename
         );
         $content->load();
         $out .= build_chapter_nav( $id, \@entries );
-        $out .= warp_xhtml_to_html_section( $content->raw_content() );
+        $out .= warp_xhtml_to_html_section( $content->content_utf8() );
         $out .= "\n</span>\n";
     }
     return $out;
@@ -91,10 +106,23 @@ sub build_chapter_nav {
 sub generate_toc {
     my $parser = shift;
 
-    my $out = q{<a name="toc"><h2>Table of contents</h2>};
+    my $out = q{<a name="toc"/><h2>Table of contents</h2>}.
+       sub_toc ($parser->toc->entries);
+    return $out;
+}
+
+sub sub_toc {
+    my $items = shift;
+    my $out;
     $out .= qq{<ul class="toc">\n};
-    foreach my $entry ( @{ $parser->toc->entries } ) {
-        $out .= qq{<li><a href="#@{[ $entry->{id}]}">@{[$entry->{label}]}</a></li>\n};
+    foreach my $entry ( @{ $items } ) {
+        $out .= qq{<li><a href="#@{[ $entry->{id}]}">@{[$entry->{label}]}</a>};
+
+    $out .= sub_toc($entry->{kids}  )   if ($entry->{kids});
+
+
+
+    $out .= qq{</li>\n};
     }
     $out .= "</ul>\n";
 
