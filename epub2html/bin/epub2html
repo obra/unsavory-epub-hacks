@@ -1,129 +1,204 @@
 use warnings;
 use strict;
-
+use File::Temp qw/tempdir/;
 use lib 'lib';
 use Text::ePub::Parser;
+use Getopt::Long;
+sub verbose;    # predeclare with null prototype. awful hack so we can say warn 'foo' if verbose;
 
-my $epub = shift @ARGV; 
-my $target = shift @ARGV;
-
-die "The target directory already exists " if -e $target;
-die "$0 foo.epub some_out_directory_to_create" unless ($epub && $target);
-my $parser = Text::ePub::Parser->new();
-
-$parser->read_epub($epub);
-
-my $toc = generate_toc($parser);
+my %args = ();
+GetOptions(\%args, (
+    'source|s=s',
+    'target|t=s',
+    'verbose|v'
+));
 
 
+my $epub   = $args{source};
+my $target = $args{target};
 
-
-
-my $out = qq{<html xmlns="http://www.w3.org/1999/xhtml" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-</head>
-<body>};
-
-
-$out .= front_matter($parser);
-
-$out .= $toc;
-
-    my @entries = @{$parser->toc->entries};
-    for my $id  (0..($#entries)) {
-        my $entry = $entries[$id];
-        my $href = $entry->{href};
-
-        my $content = Text::ePub::HTMLContent->new( epub => $parser, filename => $parser->content_prefix. $href );
-        $content->load();
-   
-    
-   $out .= qq{<a name="@{[$entry->{id}]}"/><span id="epub2html-@{[$entry->{id}]}"> };
-        $out .= '<div class="nav">';
-        $out .= qq{<a href="#@{[$entries[$id-1]->{id}]}">Previous (@{[$entries[$id-1]->{label}]})</a>} if ($id); #skip 1
-        $out .= ' <a href="#toc">Table of contents</a>';
-        $out .= qq{ <a href="#@{[$entries[$id+1]->{id}]}">Next (@{[$entries[$id+1]->{label}]})</a>} if (exists $entries[$id+1]);
-        $out .= "</nav>"; 
-    my $html= $content->raw_content();
-
-
-#<!DOCTYPE html [
-#<!ENTITY D "&#x2014;">
-#<!ENTITY o "&#x2018;">
-#<!ENTITY c "&#x2019;">
-#<!ENTITY O "&#x201C;">
-#<!ENTITY C "&#x201D;">
-#]>
-#
-
-
-   while ($html =~ /<!ENTITY\s+(.*?)\s+"(.*?)">/gim) {
-        my $from = $1;
-        my $to = $2;
-        warn "From $from to $to";
-        $html =~ s/&$from;/$to/g;
-    }
-
-
-        $html =~ s!^\s*(<.*?)?<html.*?>.*?<body.*?>!!is;
-        $html =~ s!^\s*<html.*?>.*?<body.*?>!!is;
-        $html =~ s!</body.*?>.*?</html.*>\s*$!!is; 
-        $out .=  $html;
-        $out .= "\n</span>\n";
+unless ($epub && -e $epub) { 
+    usage();
+    exit(-1);
 
 }
 
-$out .= "</body></html>";
+if ($target && -e $target ) {
+    warn "The target you specified exists already. please point to an empty directory";
+    usage();
+    exit -1;
+} elsif ($target) {
+    mkdir ($target) || die $!;
+} else {
+    $target = tempdir( CLEANUP => 0);
+    print "Your raw html will be written to $target\n";
+}
 
+my $parser = Text::ePub::Parser->new();
 
-mkdir($target) || die $!;
-open (my $outfile, ">$target/index.html") || die $!;
+unless ($parser->read_epub($epub)) {
+    die "Something bad happened while trying to read your book: $@";
+}
+
+my $html_header = build_html_header();
+my $out         = '';
+$out .= front_matter($parser);
+$out .= generate_toc($parser);
+$out .= extract_chapters($parser);
+
+$out = $html_header . "<body>" . $out . "</body></html>";
+
+open( my $outfile, ">$target/index.html" ) || die $!;
 print $outfile $out;
 close($outfile);
 
-my $content_files = $parser->manifest->content;
-for my $item (keys %$content_files) {
-    next unless ($content_files->{$item}->{media_type} =~ /image/);
-    my $file = $content_files->{$item}->{href};
-    if ($file =~ m|^(.*)/.*?$|) {
-        my $subdir = $1;
-        `mkdir -p $target/$subdir`;
-    } 
-    warn "Writing image $item" ."to ". $target."/".$file;
-    open  (my $imgout , ">",  $target."/".$file) || die "Couldn't open image: ". $!;
-    print $imgout $parser->zip->contents($parser->content_prefix.$content_files->{$item}->{href}) || die " no writey $!";
-    close $imgout;
+extract_images($parser);
+
+sub extract_chapters {
+    my $parser  = shift;
+    my @entries = @{ $parser->toc->entries };
+    my $out     = '';
+    for my $id ( 0 .. ($#entries) ) {
+        my $entry = $entries[$id];
+        my $filename  = $entry->{file};
+        my $content = Text::ePub::HTMLContent->new(
+            epub     => $parser,
+            filename => $parser->content_prefix . $filename
+        );
+        $content->load();
+        $out .= build_chapter_nav( $id, \@entries );
+        $out .= warp_xhtml_to_html_section( $content->raw_content() );
+        $out .= "\n</span>\n";
+    }
+    return $out;
 }
 
+sub build_chapter_nav {
+    my $id      = shift;
+    my @entries = @{ shift @_ };
+    my $entry   = $entries[$id];
+    my $out     = qq{<a name="@{[$entry->{id}]}"/><span id="epub2html-@{[$entry->{id}]}"> };
+    $out .= '<div class="nav">';
+    $out .= qq{<a href="#@{[$entries[$id-1]->{id}]}">Previous (@{[$entries[$id-1]->{label}]})</a>}
+        if ($id);    #skip 1
+    $out .= ' <a href="#toc">Table of contents</a>';
+    $out .= qq{ <a href="#@{[$entries[$id+1]->{id}]}">Next (@{[$entries[$id+1]->{label}]})</a>}
+        if ( exists $entries[ $id + 1 ] );
+    $out .= "</nav>";
 
-
-
-sub debug {
-    warn join(',',@_)."\n";
 }
 
-
-sub generate_toc{
+sub generate_toc {
     my $parser = shift;
 
-    my $out =  q{<a name="toc"><h2>Table of contents</h2>};
-    $out .=  qq{<ul class="toc">\n};
-    foreach my $entry (@{$parser->toc->entries}) {
-        $out .= qq{<li><a href="#@{[ $entry->{id}]}">@{[$entry->{label}]}</a></li>\n}
+    my $out = q{<a name="toc"><h2>Table of contents</h2>};
+    $out .= qq{<ul class="toc">\n};
+    foreach my $entry ( @{ $parser->toc->entries } ) {
+        $out .= qq{<li><a href="#@{[ $entry->{id}]}">@{[$entry->{label}]}</a></li>\n};
     }
     $out .= "</ul>\n";
 
     return $out;
 }
 
-
 sub front_matter {
     my $parser = shift;
-
 
     return qq{<h1>@{[$parser->manifest->title]}</h1>\n\n
     <h2>@{[$parser->manifest->author]}</h2>\n\n
     <p style="page-break-before: always"/>};
 
+}
+
+sub build_html_header {
+
+    my $out
+        = qq{<html xmlns="http://www.w3.org/1999/xhtml" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+};
+
+    return $out;
+}
+
+sub warp_xhtml_to_html_section {
+    my $html = shift;
+
+ # XHTML DTD might encode entities like this. if we were professionals, we'd use a real xhtml parser
+
+    #<!DOCTYPE html [
+    #<!ENTITY D "&#x2014;">
+    #<!ENTITY o "&#x2018;">
+    #<!ENTITY c "&#x2019;">
+    #<!ENTITY O "&#x201C;">
+    #<!ENTITY C "&#x201D;">
+    #]>
+    #
+
+    # instead, we wrote a regex in 90 seconds
+    while ( $html =~ /<!ENTITY\s+(.*?)\s+"(.*?)">/gim ) {
+        my $from = $1;
+        my $to   = $2;
+        $html =~ s/&$from;/$to/g;
+    }
+
+    $html =~ s!^\s*(<.*?)?<html.*?>.*?<body.*?>!!is;
+    $html =~ s!^\s*<html.*?>.*?<body.*?>!!is;
+    $html =~ s!</body.*?>.*?</html.*>\s*$!!is;
+
+    return $html;
+}
+
+sub extract_images {
+    my $parser        = shift;
+    my $content_files = $parser->manifest->content;
+    for my $item ( keys %$content_files ) {
+        my $media_type = $content_files->{$item}->{media_type};
+        my $file = $content_files->{$item}->{file};
+        next unless (( $media_type && $media_type =~ /(?:image|css)/i ) ||
+                      ( $file && $file =~ /(?:jpe?g|png|gif|tiff?|bmp|css)$/i));
+       
+        # this is an awful, awful hack to try to write out collateral files
+        # that start out at the same base level as document content 
+        # into the same directory as our eventual index.html 
+        
+        # This deals with:
+        # ../t/bookworm_test_data/invalid_天.epub
+
+        # the adobe alice book doesn't want or need this.
+        # The right solution probably involves parsing the html, finding a list of images it wants and trying to match them. I don't feel like doing that for a proof of concept.
+        
+        my $ch0_path = $parser->toc->entries->[0]->{file};
+        $ch0_path =~ s|/(.+)?$|/|;
+
+        my $out_path = $file;
+
+        $out_path =~ s/^$ch0_path//;   
+ 
+        if ( $out_path =~ m|^(.*)/.+$| ) {
+            my $subdir = $1;
+            warn "Creating subdir $subdir";
+            `mkdir -p $target/$subdir`;
+        }
+        warn "Writing image $item from ".$parser->content_prefix."($file) " . "to  $target/" . $out_path  if verbose;
+        open( my $imgout, ">", $target . "/" . $out_path ) || die "Couldn't open image output file $out_path in $target: " . $!;
+        print $imgout $parser->zip->contents( $parser->content_prefix . $file )
+            || die " no writey $!";
+        close $imgout;
+    }
+
+}
+
+sub usage {
+print <<EOF;
+
+$0 --source /home/lcarroll/from-publisher/alice.epub --target /home/lcarroll/alice.html --verbose
+
+EOF
+}
+
+
+sub verbose {
+    $ENV{'EPUB2HTML_VERBOSE'} ? 1 : 0;
 }
