@@ -13,6 +13,8 @@ Image::Size => 0,
 XML::Parser::Lite::Tree => 0,
 );
 
+auto_install_deps();
+
 #MobiPerl::Config
 #MobiPerl::EXTH
 #MobiPerl::LinksInfo

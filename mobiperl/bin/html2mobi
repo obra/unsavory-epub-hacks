@@ -155,7 +155,6 @@ MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config,
 
 sub one_html_file {
     my $filename = shift;
-    print STDERR "ONEHTMLFILE: $filename\n";
     my $tree = new HTML::TreeBuilder ();
     $tree->ignore_unknown (0);
     $tree->parse_file ($filename) || die "Could not find file: $filename\n";
@@ -174,11 +173,9 @@ sub convert_tree {
 	$config->title ($titleelement->as_trimmed_text ());
     }
 
-##    print STDERR "T:", $config->title (), ":\n";
     if (not $config->title ()) {
 	my $title = $filename;
-	$title =~ s/\.html//;
-	$title =~ s/\.htm//;
+	$title =~ s/\.html?//;
 	print STDERR "Setting title from filename: $title\n";
 	$config->title ($title);
     }
@@ -206,7 +203,6 @@ sub convert_tree {
 
 	    my $body = $tree->find ("body");
 	    if ($body) {
-		print STDERR "Adding cover link: $coverimage\n";
 		$body->unshift_content ($coverp);
 	    }
 	    $linksinfo->check_for_links ($tree);
@@ -247,7 +243,6 @@ sub convert_tree {
 	$key =~ s/\#//g;
 	push @hrefs, $key;
 	push @refels, $r;
-#	$r->attr ("href", undef);
     }
 
     my $data = $tree->as_HTML ();
@@ -257,12 +252,9 @@ sub convert_tree {
 	my $searchfor1 = "id=\"$h\"";
 	my $searchfor2 = "<a name=\"$h\"";
 	
-###	print STDERR "SEARCHFOR1: $searchfor1\n";
 	my $pos = index ($data, $searchfor1);
 	if ($pos >= 0) {
-	    #
 	    # search backwards for <
-	    #
 	    
 	    while (substr ($data, $pos, 1) ne "<") {
 		$pos--;
@@ -273,11 +265,9 @@ sub convert_tree {
 	    print STDERR "POSITION: $pos - $searchfor1 - $form\n";
 	    $r->attr ("filepos", "$form");
 	} else {
-###	    print STDERR "SEARCHFOR2: $searchfor2\n";
 	    $pos = index ($data, $searchfor2);
 	    if ($pos >= 0) {
 		my $form = "0" x (10-length($pos)) . "$pos";
-###		print STDERR "POSITION: $pos - $searchfor2 - $form\n";
 		$r->attr ("filepos", "$form");
 	    } else {
 	    }
