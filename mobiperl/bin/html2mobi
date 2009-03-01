@@ -110,6 +110,11 @@ $mobifile =~ s/\.html/\.mobi/;
 $mobifile =~ s/\.htm/\.mobi/;
 
 if ($#filenames == 0) {
+    use File::Spec;
+    my @dir = File::Spec->splitdir($filename);
+    pop @dir;
+    chdir (File::Spec->catdir(@dir));  
+
     $tree = one_html_file ($filename);
 } else {
     if (not defined $opt_title) {
