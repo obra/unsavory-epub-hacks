@@ -127,7 +127,8 @@ sub get_tree_from_opf {
         id    => "addedcoverlink",
         align => "center"
     );
-    my $coverimageel = HTML::Element->new( 'a', onclick => "document.goto_page_relative(1)" );
+    my $coverimageel =
+      HTML::Element->new( 'a', onclick => "document.goto_page_relative(1)" );
     $coverp->push_content($coverimageel);
 
     if ( $config->add_cover_link() ) {
@@ -192,7 +193,7 @@ sub get_tree_from_opf {
     }
 
     if ($coverimage) {
-        copy( "../$coverimage", $coverimage );    # copy if specified --coverimage
+        copy( "../$coverimage", $coverimage );  # copy if specified --coverimage
         $linksinfo->add_cover_image($coverimage);
         if ( $config->add_cover_link() ) {
             my $el = HTML::Element->new( 'img', src => "$coverimage" );
@@ -203,7 +204,8 @@ sub get_tree_from_opf {
 
     if ( $config->thumb_image() ) {
         $linksinfo->add_thumb_image( $config->thumb_image() );
-    } else {
+    }
+    else {
         if ($coverimage) {
             $linksinfo->add_thumb_image($coverimage);
         }
@@ -246,7 +248,8 @@ sub get_tree_from_opf {
             my $form = "0" x ( 10 - length($pos) ) . "$pos";
             print STDERR "POSITION: $pos - $searchfor1 - $form\n";
             $r->attr( "filepos", "$form" );
-        } else {
+        }
+        else {
             $pos = index( $data, $searchfor2 );
             if ( $pos >= 0 ) {
                 my $form = "0" x ( 10 - length($pos) ) . "$pos";
@@ -279,7 +282,7 @@ sub unpack_lit_file {
     }
 
     system("clit \"$litfile\" $unpackdir") == 0
-        or die "system (clit $litfile $unpackdir) failed: $?";
+      or die "system (clit $litfile $unpackdir) failed: $?";
 
 }
 
@@ -357,7 +360,8 @@ sub get_gd_image_data {
 
     if ( $quality <= 0 ) {
         return $im->jpeg();
-    } else {
+    }
+    else {
         return $im->jpeg($quality);
     }
 }
@@ -408,10 +412,13 @@ sub get_image_data {
 
     # do not resize large images if the filesize is OK,
     # even if pixel dimensions are large
-    if (    $filesize < $maxsize
-        and ( ( not $rescale_large_images ) || ( $x <= $maxwidth and $y <= $maxheight ) )
+    if (
+        $filesize < $maxsize
+        and (  ( not $rescale_large_images )
+            || ( $x <= $maxwidth and $y <= $maxheight ) )
         and $type ne "PNG"
-        and ( not defined $scale_factor or $scale_factor == 1.0 ) )
+        and ( not defined $scale_factor or $scale_factor == 1.0 )
+      )
     {
 
         # No transformation has to be done, keep data as is
@@ -476,7 +483,8 @@ sub get_image_data {
                 my $scale = $maxheight * 1.0 / $y;
                 $p = MobiPerl::Util::scale_gd_image( $p, $scale );
             }
-        } else {
+        }
+        else {
             if ( $x > $maxwidth ) {
                 my $scale = $maxwidth * 1.0 / $x;
                 $p = MobiPerl::Util::scale_gd_image( $p, $scale );
@@ -497,8 +505,12 @@ sub get_image_data {
 
     if ( $size > $maxsize ) {
         $quality = 100;
-        while ( length( MobiPerl::Util::get_gd_image_data( $p, $filename, $quality ) ) > $maxsize
-            and $quality >= 0 )
+        while (
+            length(
+                MobiPerl::Util::get_gd_image_data( $p, $filename, $quality )
+            ) > $maxsize
+            and $quality >= 0
+          )
         {
             $quality -= 10;
         }
@@ -519,7 +531,7 @@ sub get_image_data {
 
 sub iso2hex($) {
     my $hex = '';
-    for ( my $i = 0; $i < length( $_[0] ); $i++ ) {
+    for ( my $i = 0 ; $i < length( $_[0] ) ; $i++ ) {
         my $ordno = ord substr( $_[0], $i, 1 );
         $hex .= sprintf( "%lx", $ordno );
     }
@@ -536,10 +548,11 @@ sub fix_html {
     my $newp;
     warn "Fxiing html";
     foreach my $p (@paras) {
-        if ($p->attr('style') =~ /page-break-before: always/) {
-                $p->preinsert(HTML::Element->new('mbp:pagebreak') );
-        }elsif ($p->attr('style') =~ /page-break-after: always/) {
-                $p->postinsert(HTML::Element->new('mbp:pagebreak') );
+        if ( $p->attr('style') =~ /page-break-before: always/ ) {
+            $p->preinsert( HTML::Element->new('mbp:pagebreak') );
+        }
+        elsif ( $p->attr('style') =~ /page-break-after: always/ ) {
+            $p->postinsert( HTML::Element->new('mbp:pagebreak') );
         }
         if ( not $inside_para ) {
             $newp        = HTML::Element->new("p");
@@ -550,7 +563,8 @@ sub fix_html {
             my $h = $newp->as_HTML();
             $p->replace_with($newp);
             $inside_para = 0;
-        } else {
+        }
+        else {
             my @span = $p->find("span");
             foreach my $span (@span) {
                 $span->replace_with( $span->content_list() );
@@ -593,12 +607,15 @@ sub fix_html_br {
                 $i++;
                 if ( $i % 10 == 0 ) {
                 }
-            } else {
+            }
+            else {
                 $p->push_content($c);
             }
-        } else {
+        }
+        else {
             if ( ref($c) ) {
-            } else {
+            }
+            else {
             }
             $p->push_content($c);
         }

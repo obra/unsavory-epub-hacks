@@ -17,8 +17,8 @@ package MobiPerl::LinksInfo;
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-                use File::Temp qw/tempfile/;
-                use LWP::Simple;
+use File::Temp qw/tempfile/;
+use LWP::Simple;
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
@@ -28,44 +28,44 @@ use strict;
 ##use Data::Dumper;
 
 sub new {
-    my $this = shift;
+    my $this  = shift;
     my $class = ref($this) || $this;
-    my $obj = bless {
-	LINKEXISTS => {},
-	RECORDINDEX => 0,
-	RECORDTOIMAGEFILE => {},
-	COVEROFFSET => -1,
-	THUMBOFFSET => -1,
-	@_
+    my $obj   = bless {
+        LINKEXISTS        => {},
+        RECORDINDEX       => 0,
+        RECORDTOIMAGEFILE => {},
+        COVEROFFSET       => -1,
+        THUMBOFFSET       => -1,
+        @_
     }, $class;
     return $obj;
 }
 
 sub link_exists {
-    my $self = shift;    
+    my $self = shift;
     return $self->{LINKEXISTS};
 }
 
 sub add_image_link {
-    my $self = shift;
+    my $self  = shift;
     my $image = shift;
 ##    print STDERR "ADD_IMAGE_LINK: $image\n";
     $self->{RECORDINDEX}++;
-    $self->{RECORDTOIMAGEFILE}->{$self->get_record_index ()} = $image;
+    $self->{RECORDTOIMAGEFILE}->{ $self->get_record_index() } = $image;
 }
 
 sub add_cover_image {
-    my $self = shift;
+    my $self  = shift;
     my $image = shift;
-    $self->add_image_link ($image);
-    $self->{COVEROFFSET} = $self->get_record_index () - 1;
+    $self->add_image_link($image);
+    $self->{COVEROFFSET} = $self->get_record_index() - 1;
 }
 
 sub add_thumb_image {
-    my $self = shift;
+    my $self  = shift;
     my $image = shift;
-    $self->add_image_link ($image);
-    $self->{THUMBOFFSET} = $self->get_record_index () - 1;
+    $self->add_image_link($image);
+    $self->{THUMBOFFSET} = $self->get_record_index() - 1;
 }
 
 sub get_cover_offset {
@@ -79,28 +79,26 @@ sub get_thumb_offset {
 }
 
 sub get_record_index {
-    my $self = shift;    
+    my $self = shift;
     return $self->{RECORDINDEX};
 }
 
 sub get_image_file {
-    my $self = shift;    
-    my $val = shift;
+    my $self = shift;
+    my $val  = shift;
     return $self->{RECORDTOIMAGEFILE}->{$val};
 }
 
 sub get_n_images {
     my $self = shift;
-    my $res = keys %{$self->{RECORDTOIMAGEFILE}};
+    my $res  = keys %{ $self->{RECORDTOIMAGEFILE} };
     return $res;
 }
-
-
 
 sub check_for_links {
     my $self = shift;
     my $html = shift;
-    for ( @{ $html->extract_links(  'img' ) } ) {
+    for ( @{ $html->extract_links('img') } ) {
         my ( $link, $element, $attr, $tag ) = @$_;
 
         #	print STDERR "LINK: $tag $link $attr at ", $element->address(), " ";
@@ -113,21 +111,27 @@ sub check_for_links {
                 #
                 $element->attr( "src", undef );
                 $self->{RECORDINDEX}++;
-                $element->attr( "recindex", sprintf( "%05d", $self->{RECORDINDEX} ) );
+                $element->attr( "recindex",
+                    sprintf( "%05d", $self->{RECORDINDEX} ) );
                 $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } = $src;
-            } elsif ($src =~ /^(?:file|https?):/) {
-                eval {;
-                my ($fh, $filename) = tempfile();
-                warn "Fetching $src";
-                my $data = LWP::Simple::get($src);
-                print $fh $data|| die $!;
-                close ($fh);
-                $element->attr( "src", undef );
-                $self->{RECORDINDEX}++;
-                $element->attr( "recindex", sprintf( "%05d", $self->{RECORDINDEX} ) );
-                $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } = $filename;
-            };
-            } else {
+            }
+            elsif ( $src =~ /^(?:file|https?):/ ) {
+                eval {
+                    ;
+                    my ( $fh, $filename ) = tempfile();
+                    warn "Fetching $src";
+                    my $data = LWP::Simple::get($src);
+                    print $fh $data || die $!;
+                    close($fh);
+                    $element->attr( "src", undef );
+                    $self->{RECORDINDEX}++;
+                    $element->attr( "recindex",
+                        sprintf( "%05d", $self->{RECORDINDEX} ) );
+                    $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } =
+                      $filename;
+                };
+            }
+            else {
                 print STDERR "Warning: Image file do not exists: $src\n";
             }
             next;
