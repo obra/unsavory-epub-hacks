@@ -509,16 +509,11 @@ sub get_extended_header_data {
 
     my $coffset = $self->get_cover_offset();
     if ( $coffset >= 0 ) {
-##	my $data = pack ("N", $coffset);
-##	print STDERR "COFFSET:$coffset:$data:\n";
         $eh->set( "coveroffset", $coffset );
     }
 
     my $toffset = $self->get_thumb_offset();
     if ( $toffset >= 0 ) {
-##	my $data = pack ("N", $toffset);
-##	my $hex = MobiPerl::Util::iso2hex ($data);
-##	print STDERR "TOFFSET:$toffset:$hex\n";
         $eh->set( "thumboffset", $toffset );
     }
 
@@ -547,8 +542,6 @@ sub get_data {
       length( $self->get_extended_header_data() );
     my $extended_title_length = length( $self->get_title() );
 
-    print STDERR "MOBIHDR: imgrecpointer: ", $self->get_image_record_index(),
-      "\n";
 
     $res .= pack( "a*NNNNN",
         "MOBI", $self->get_header_size(),
@@ -569,9 +562,7 @@ sub get_data {
     $res .= pack( "NNNN", 0xFFFFFFFF, 0, 0xFFFFFFFF, 0 );
     $res .= pack( "N", $extended_header_flag );
 
-#    print STDERR "MOBIHEADERSIZE: $mobiheadersize " . length ($header->{'data'}). "\n";
     while ( length($res) < $self->get_header_size() ) {
-###	print STDERR "LEN: " . length ($res) . " - " . $self->get_header_size () . "\n";
         $res .= pack( "N", 0 );
     }
 
@@ -715,11 +706,10 @@ sub set_exth_data {
     my $delexthindex = shift;
     my $res          = $h;
     if ( defined $data ) {
-        print STDERR "Setting extended header data: $type - $data\n";
+        warn "Setting extended header data: $type - $data\n";
     }
     else {
-        print STDERR
-          "Deleting extended header data of type: $type - $delexthindex\n";
+        warn "Deleting extended header data of type: $type - $delexthindex\n";
     }
 
     my ( $doctype, $length, $htype, $codepage, $uniqueid, $ver ) =
@@ -791,7 +781,6 @@ sub set_exth_data {
             $eh->delete( $type, $delexthindex );
         }
     }
-    print STDERR "GETSTRING: ", $eh->get_string();
 
     #
     # Fix DRM and TITLE info pointers...

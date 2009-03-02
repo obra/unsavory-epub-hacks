@@ -163,17 +163,13 @@ sub add {
     my $type     = $self->get_type($typename);
     if ( is_binary_data($type) ) {
         my $hex = MobiPerl::Util::iso2hex($data);
-        print STDERR "EXTH add: $typename - $type - ", int($data), " - $hex\n";
-    }
-    else {
-        print STDERR "EXTH add: $typename - $type - $data\n";
     }
     if ($type) {
         push @{ $self->{TYPE} }, $type;
         push @{ $self->{DATA} }, $data;
     }
     else {
-        print STDERR "WARNING: $typename is not defined as an EXTH type\n";
+        warn "WARNING: $typename is not defined as an EXTH type\n";
     }
     return $type;
 }
@@ -183,7 +179,6 @@ sub delete {
     my $typename     = shift;
     my $delexthindex = shift;
     my $type         = $self->get_type($typename);
-    print STDERR "EXTH delete: $typename - $type - $delexthindex\n";
     if ($type) {
         my @type = @{ $self->{TYPE} };
         my @data = @{ $self->{DATA} };
@@ -191,21 +186,19 @@ sub delete {
         @{ $self->{DATA} } = ();
         my $index = 0;
         foreach my $i ( 0 .. $#type ) {
-##	    print STDERR "TYPE: $type[$i]\n";
             if ( $type[$i] == $type ) {
                 $index++;
-##		print STDERR "INDEX: $index\n";
             }
             if ( $type[$i] == $type
                 and ( $delexthindex == 0 or $delexthindex == $index ) )
             {
                 if ( is_binary_data( $type[$i] ) ) {
                     my $hex = MobiPerl::Util::iso2hex( $data[$i] );
-                    print STDERR "DELETING $type[$i]: ", int( $data[$i] ),
+                    warn "DELETING $type[$i]: ", int( $data[$i] ),
                       " - $hex\n";
                 }
                 else {
-                    print STDERR "DELETING $type[$i]: $data[$i]\n";
+                    warn "DELETING $type[$i]: $data[$i]\n";
                 }
             }
             else {
@@ -215,7 +208,7 @@ sub delete {
         }
     }
     else {
-        print STDERR "WARNING: $typename is not defined as an EXTH type\n";
+        warn "WARNING: $typename is not defined as an EXTH type\n";
     }
 }
 
@@ -223,7 +216,6 @@ sub get_type {
     my $self     = shift;
     my $typename = shift;
     my $res      = 0;
-###    print STDERR "EXTH: GETTYPE: $typename\n";
     if ( defined $typename_to_type{$typename} ) {
         $res = $typename_to_type{$typename};
     }
@@ -241,14 +233,13 @@ sub set {
     my $data     = shift;
     my $type     = $self->get_type($typename);
     my $hex      = MobiPerl::Util::iso2hex($data);
-    print STDERR "EXTH setting data: $typename - $type - $data - $hex\n";
     if ($type) {
         my @type  = @{ $self->{TYPE} };
         my @data  = @{ $self->{DATA} };
         my $found = 0;
         foreach my $i ( 0 .. $#type ) {
             if ( $type[$i] == $type ) {
-                print STDERR "EXTH replacing data: $type - $data - $hex\n";
+                warn "EXTH replacing data: $type - $data - $hex\n";
                 $self->{TYPE}->[$i] = $type;
                 $self->{DATA}->[$i] = $data;
                 $found              = 1;
@@ -266,9 +257,6 @@ sub initialize_from_data {
     my $self = shift;
     my $data = shift;
     my ( $doctype, $len, $n_items ) = unpack( "a4NN", $data );
-##    print "EXTH doctype: $doctype\n";
-##    print "EXTH  length: $len\n";
-##    print "EXTH n_items: $n_items\n";
     my $pos = 12;
     foreach ( 1 .. $n_items ) {
         my ( $type, $size ) = unpack( "NN", substr( $data, $pos ) );
@@ -277,14 +265,11 @@ sub initialize_from_data {
         my ($content) = unpack( "a$contlen", substr( $data, $pos ) );
         if ( defined $format{$type} ) {
             my $len = $format{$type};
-##	    print STDERR "TYPE:$type:$len\n";
             if ( $len == 4 ) {
                 ($content) = unpack( "N", substr( $data, $pos ) );
-##		print STDERR "CONT:$content\n";
             }
             if ( $len == 1 ) {
                 ($content) = unpack( "C", substr( $data, $pos ) );
-##		print STDERR "CONT:$content\n";
             }
         }
         push @{ $self->{TYPE} }, $type;
@@ -292,7 +277,7 @@ sub initialize_from_data {
         $pos += $contlen;
     }
     if ( $self->get_data() ne substr( $data, 0, $len ) ) {
-        print STDERR "ERROR: generated EXTH does not match original\n";
+        warn "ERROR: generated EXTH does not match original\n";
         my $s1 = $self->get_data();
         my $s0 = substr( $data, 0, $len );
         foreach my $i ( 0 .. length($s0) - 1 ) {
@@ -301,15 +286,11 @@ sub initialize_from_data {
                 my $c1 = substr( $s1, $i, 1 );
                 $c0 = MobiPerl::Util::iso2hex($c0);
                 $c1 = MobiPerl::Util::iso2hex($c1);
-                print STDERR "MISMATCH POS:$i:$c0:$c1\n";
+                warn "MISMATCH POS:$i:$c0:$c1\n";
             }
         }
     }
 
-    #    open EXTH0, ">exth0";
-    #    print EXTH0 substr ($data, 0, $len);
-    #    open EXTH1, ">exth1";
-    #    print EXTH1 $self->get_data ();
 }
 
 sub get_data {
@@ -364,10 +345,7 @@ sub get_cover_offset {
     #    my $res = 0;
     foreach my $i ( 0 .. $#type ) {
         if ( $type[$i] == 201 ) {
-##	    print STDERR "TYPE: $type[$i] - $data[$i]\n";
-##	    ($res) = unpack ("N", $data[$i]);
             $res = $data[$i];
-##	    print STDERR "RES: $res\n";
         }
     }
     return $res;
@@ -381,7 +359,6 @@ sub get_thumb_offset {
     # pdurrant: 0 is a valid cover offset, so return -1 if not found
     my $res = -1;
 
-    #    my $res = 0;
     foreach my $i ( 0 .. $#type ) {
         if ( $type[$i] == 202 ) {
             $res = $data[$i];

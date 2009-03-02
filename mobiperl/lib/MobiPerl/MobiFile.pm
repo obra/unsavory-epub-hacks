@@ -45,8 +45,6 @@ sub save_mobi_file {
     my $author = $config->author();
     my $title  = $config->title();
 
-    print STDERR "Saving mobi file (version 4): $filename\n";
-
     my $mobi = Palm::Doc->new;
     $mobi->{attributes}{"resource"} = 0;
     $mobi->{attributes}{"ResDB"}    = 0;
@@ -83,10 +81,6 @@ sub save_mobi_file {
     $header->{'recsize'} = DOC_RECSIZE;
 
     my $body = $html->as_HTML();
-    #$body =~ s/&amp\;nbsp\;/&nbsp\;/g;  #fix &nbsp; that fix_pre_tags have added
-
-    #    print STDERR "HTMLSIZE: " . length ($body) . "\n";
-
     my $current_record_index = 1;
 
     # break the document into record-sized chunks
@@ -121,17 +115,14 @@ sub save_mobi_file {
     #    $mh->set_cover_offset (0); # It crashes on Kindle if no cover is
     # is available and offset is set to 0
     my $cover_offset = $linksinfo->get_cover_offset();
-    print STDERR "COVEROFFSET: $cover_offset\n";
     $mh->set_cover_offset($cover_offset);    # Set to -1 if no cover image
 
     #    if ($cover_offset >= 0) {
     #	$mh->set_cover_offset ($cover_offset);
     #    }
 
-    my $thumb_offset = $linksinfo->get_thumb_offset();
-    print STDERR "THUMBOFFSET: $thumb_offset\n";
-    if ( $thumb_offset >= 0 ) {
-        $mh->set_thumb_offset($thumb_offset);
+    if (my $thumb_offset = $linksinfo->get_thumb_offset() ) {
+        $mh->set_thumb_offset($thumb_offset) if ( $thumb_offset >= 0 );
     }
 
 ##    my $codepage = 65001; # utf-8
@@ -236,8 +227,6 @@ sub save_mobi_file {
         #
 
         if ( $coverimage and 0 ) {
-            print STDERR
-"New record for library image $current_record_index: $coverimage\n";
             my $img = Palm::PDB->new_Record();
             $img->{"categori"}            = 0;
             $img->{"attributes"}{"Dirty"} = 1;

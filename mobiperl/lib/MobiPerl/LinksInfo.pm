@@ -95,28 +95,28 @@ sub get_n_images {
 sub check_for_links {
     my $self = shift;
     my $html = shift;
+    my $base_dir ='';
+   $base_dir  = shift if (@_);
+
+
     for ( @{ $html->extract_links('img') } ) {
         my ( $link, $element, $attr, $tag ) = @$_;
 
-        #	print STDERR "LINK: $tag $link $attr at ", $element->address(), " ";
         if ( $tag eq "img" ) {
             my $src = $element->attr("src");
-            if ( -e "$src" ) {
-
-                #
+            my $file = File::Spec->catfile($base_dir,$src);
+            if ( -e $file ) {
                 # Onlys save link if image exists.
-                #
                 $element->attr( "src", undef );
                 $self->{RECORDINDEX}++;
                 $element->attr( "recindex",
                     sprintf( "%05d", $self->{RECORDINDEX} ) );
-                $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } = $src;
+                $self->{RECORDTOIMAGEFILE}->{ $self->{RECORDINDEX} } = $file;
             }
             elsif ( $src =~ /^(?:file|https?):/ ) {
                 eval {
                     ;
                     my ( $fh, $filename ) = tempfile();
-                    warn "Fetching $src";
                     my $data = LWP::Simple::get($src);
                     print $fh $data || die $!;
                     close($fh);
@@ -129,7 +129,7 @@ sub check_for_links {
                 };
             }
             else {
-                print STDERR "Warning: Image file do not exists: $src\n";
+                print STDERR "Warning: Image file does not exists: $src\n";
             }
             next;
         }

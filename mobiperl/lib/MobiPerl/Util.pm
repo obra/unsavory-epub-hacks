@@ -451,16 +451,8 @@ sub get_image_data {
                 }
             }
         }
-##	open IMAGE, ">dummy-$filename.jpg";
-##	print IMAGE $p->jpeg ();
-##	close IMAGE;
     }
     ( $x, $y ) = $p->getBounds();    # reuse of $x and $y...
-
-    #    my $x = $p->width;
-    #    my $y = $p->height;
-
-    #
     # If I do not resize 600x800 images it does not work on Gen3
     #
     # check this one more time, 600x800 gif and jpeg with size
@@ -472,7 +464,6 @@ sub get_image_data {
     # so must use the --imagerescale argument to get 600x800.
 
     if ( defined $scale_factor and $scale_factor != 1.0 ) {
-        print STDERR "SCALE IMAGE: $scale_factor\n";
         $p = MobiPerl::Util::scale_gd_image( $p, $scale_factor );
     }
 
@@ -493,14 +484,6 @@ sub get_image_data {
         }
     }
 
-    #
-    #   Scale if scale option given
-    #   or does it work just setting width?
-    #
-
-    ##  $filename =~ s/\....$/\.gif/;
-    ##  print STDERR "UTIL FILENAME: $filename\n";
-
     my $quality = -1;
     my $size = length( MobiPerl::Util::get_gd_image_data( $p, $filename ) );
 
@@ -519,12 +502,6 @@ sub get_image_data {
             die "Could not shrink image file size for $filename";
         }
     }
-
-##    if ($y < 640 and $x < 480 and defined $opt_scale) {
-##	my $scale = $opt_scale;
-##	$p = MobiPerl::Util::scale_gd_image ($p, $scale);
-##	print STDERR "Rescaling $$scale\n";
-##    }
 
     $data = MobiPerl::Util::get_gd_image_data( $p, $filename, $quality );
     return $data;
