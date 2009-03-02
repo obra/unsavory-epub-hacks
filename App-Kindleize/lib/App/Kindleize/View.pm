@@ -13,7 +13,7 @@ template 'home' => page {
     h1 { 'ePubs for your Kindle'};
 
     p{ outs 'Just visit';
-        b{'http://kindle.fsck.com/http://some.ebook.site/my.epub'}};
+        b{'http://kindle.fsck.com/epub/http://some.ebook.site/my.epub'}};
 
 };
 
