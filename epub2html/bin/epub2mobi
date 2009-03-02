@@ -11,14 +11,12 @@ my %args = ();
 GetOptions( \%args, ( 'source|s=s', 'target|t=s', 'verbose|v' ) );
 
 unless ( $args{source} && -e $args{source} ) {
-    usage();
     exit(-1);
 
 }
 
 if ( $args{target} && -e $args{target} ) {
     warn "The target you specified exists already. please point to an empty directory";
-    usage();
     exit -1;
 }
 
