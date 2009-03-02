@@ -3,7 +3,6 @@ use Jifty::Dispatcher -base;
 sub LWP::Debug::debug {}
 sub LWP::Debug::trace {}
 use LWPx::ParanoidAgent;
-        use Text::ePub::genMobi;
 use File::Temp qw/tempfile/;
 use Digest::SHA1;
 use File::Spec;
