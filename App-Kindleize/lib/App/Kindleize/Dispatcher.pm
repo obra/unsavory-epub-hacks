@@ -10,7 +10,7 @@ use File::Spec;
         `mkdir /tmp/mobi`;
         `mkdir /tmp/epub`;
 
-on qr'^/(index.html)?' => sub { show 'home' };
+on qr'^/(index.html)?$' => sub { show 'home' };
 
 on qr'^/epub/(https?\://?.*)$' => run {
     my $url = $1;
