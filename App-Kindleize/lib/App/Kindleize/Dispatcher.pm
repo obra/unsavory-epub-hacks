@@ -78,6 +78,7 @@ on qr'/setup/(.*?).mobi' => sub {
     send_mobi($tmpmobi);
     unlink($file);
     unlink ($tmpmobi);
+    last_rule;
 };
 
 on qr'/account/(\w+)/?$' => run { redirect '/account/'.$1.'/home'};
