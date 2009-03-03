@@ -9,11 +9,47 @@ private template 'heading_in_wrapper' => sub {};
 private template 'header' => sub {};
 private template 'menu' => sub {};
 
+template 'account_home' => page {
+    my $u = get('user');
+
+h1 { 'Welcome to #APP#' };
+h2 { 'Your token is '.$u->token};
+p { Jifty->web->link( url => '/', label => 'foo')};
+
+p { outs( 'Visit ') ;
+    Jifty->web->link( label => Jifty->web->url ."setup/". $u->token.".mobi", url => "setup/". $u->token.".mobi") ;
+    outs( " from your Kindle")};
+
+};
+
+template 'account_library' => page {
+    h1 {'Your library'};
+    my $u = get('user');
+    my $items = $u->library_items;
+    ul {
+    foreach my $item (@$items) {
+
+        li { 
+           Jifty->web->link( label =>  "Download ".$item->url." for your Kindle", url => '/mobi/'.$item->sha1.".mobi");
+        }
+    }
+    }
+
+};
+
+template 'account_adding' => page {
+my $u = get('user');
+h1 { 'Welcome to #APP#' };
+h2 { 'Your token is '.$u->token};
+p{ outs("Now downloading ".get('url'))}
+
+};
+
 template 'home' => page { 
     h1 { 'ePubs for your Kindle'};
 
     p{ outs 'Just visit';
-        b{'http://kindle.fsck.com/epub/http://some.ebook.site/my.epub'}};
+        b{Jifty->web->url.'epub/http://some.ebook.site/my.epub'}};
 
 };
 

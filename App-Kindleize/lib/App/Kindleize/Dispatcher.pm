@@ -7,9 +7,6 @@ use File::Temp qw/tempfile/;
 use Digest::SHA1;
 use File::Spec;
 
-        `mkdir /tmp/mobi`;
-        `mkdir /tmp/epub`;
-
 on qr'^/(index.html)?$' => sub { show 'home' };
 
 on qr'^/epub/(https?\://?.*)$' => run {
@@ -21,8 +18,8 @@ on qr'^/epub/(https?\://?.*)$' => run {
     warn "Fetching $url";
     my $response = $ua->get($url);
     warn "Fetched";
-            my $sha1 = Digest::SHA1::sha1_hex($response->decoded_content);
     if ($response->is_success) {
+            my $sha1 = Digest::SHA1::sha1_hex($response->decoded_content);
         my $file = File::Spec->catfile("/tmp/epub/".$sha1);
         unless ( -e $file ) {
             open (my $fh, ">", $file);
@@ -30,7 +27,8 @@ on qr'^/epub/(https?\://?.*)$' => run {
             close($fh);
         } 
 
-        unless (File::Spec->catfile("/tmp/mobi/".$sha1.".epub")) {        mobify($file => $sha1)};
+        unless (File::Spec->catfile("/tmp/mobi/".$sha1.".epub")) {  
+            App::Kindleize::epub_to_mobi($file => $sha1)};
 
         redirect("/build-mobi/".$sha1.".mobi");
         last_rule;
@@ -55,35 +53,88 @@ on qr'/build-mobi/(.*).mobi' => sub {
 
 };
 
+on '/new_account' => sub {
+    my $u = App::Kindleize::Model::Account->new(current_user => App::Kindleize::CurrentUser->superuser);
+    $u->create;
+    redirect('/account/'.$u->token.'/home');
+
+};
+
+on qr'/setup/(.*?).mobi' => sub {
+    my $token = $1;
+   my $content =  qq{<html><head><title>##APP## for $token</title></head>
+                 <body><a href="}.Jifty->web->url."/account/".$token.
+                 qq{/library">Visit your library</a></body</html>};
+    close $fh;
+   
+    my ($fh, $file) = tempfile();
+    print $fh $content;
+    close($fh);
+
+    my ($mobifh, $tmpmobi) =tempfile();
+    close ($mobifh);
+    App::Kindleize::html_to_mobi($file => $tmpmobi);
+
+    send_mobi($tmpmobi);
+    unlink($file);
+    unlink ($tmpmobi);
+};
+
+on qr'/account/(\w+)/?$' => run { redirect '/account/'.$1.'/home'};
+under qr'/account/(.*?)/' => run {
+    my $token = $1;
+    my $u     = App::Kindleize::Model::Account->new(
+        current_user => App::Kindleize::CurrentUser->superuser );
+    $u->load_by_cols( token => $token );
+    set user          => $u;
+    on qr'^(.*)$' => sub { warn "GOT $1";};
+    on 'home'         => sub { warn "home";show '/account_home' };
+    on 'library'      => sub {warn "lib"; show "/account_library" };
+        on qr'^/account/(?:\w+)/add/(.*)$' => sub {
+        my $url = $1;
+        $url =~ s|:/|://|;
+        set url => $url;
+        my $record = App::Kindleize::Model::LibraryItem->new(
+            current_user => App::Kindleize::CurrentUser->superuser );
+        $record->create( url => $url, account => $u->id );
+        show "/account_adding";
+
+    }
+};
+
 on qr'/mobi/(.*).mobi' => sub {
     my $sha = $1;
-    warn "Getting $sha";
+    send_mobi("/tmp/mobi/".$sha.".mobi");
+    last_rule;  
+
+};
+
+sub send_mobi {
+    my $file = shift;
     my $apache = Jifty->handler->apache;
+    unless (-e $file ) {
+        redirect '/error/mobi-file-missing';
+    }
     $apache->header_out( Status          => 200 );
 
+    warn "Sending mobi $file";
     # Expire in a year
         $apache->content_type('application/x-mobipocket-ebook');
 
-    open (my $fd, "<", File::Spec->catfile("/tmp/mobi/",$sha.".mobi")) || die "file $!" . File::Spec->catfile("/tmp/mobi/",$sha);
+    open (my $fd, "<", File::Spec->catfile($file)) || die "file $file $!";
     unless ($fd) {
         redirect "/errors/no/such/mobi";
     }
     Jifty->handler->send_http_header;
     $apache->send_fd($fd);
     while (<$fd>) {
+        warn "Printing ".$_;
         print $_
     }
     close($fd);
-    last_rule;  
 
 };
 
-sub mobify {
-    my $name = shift;
-    my $sha1 = shift;
-    my $file = File::Spec->catfile('/tmp/mobi/',$sha1 .".mobi");
-    system("perl -I/Users/jesse/git/github/unsavory-epub-hacks/epub2html/lib -I/Users/jesse/git/github/unsavory-epub-hacks/mobi2html/lib /Users/jesse/git/github/unsavory-epub-hacks/epub2html/bin/epub2mobi --source $name --target $file &");
-};
 
-1;
+'TRUE!';
 
