@@ -63,8 +63,8 @@ on '/new_account' => sub {
 on qr'/setup/(.*?).mobi' => sub {
     my $token = $1;
    my $content =  qq{<html><head><title>##APP## for $token</title></head>
-                 <body><a href="}.Jifty->web->url."/account/".$token.
-                 qq{/library">Visit your library</a></body</html>};
+                 <body><font size="6"><a href="}.Jifty->web->url."account/".$token.
+                 qq{/library">Visit your library</a></font></body</html>};
     close $fh;
    
     my ($fh, $file) = tempfile();
