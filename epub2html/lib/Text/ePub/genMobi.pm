@@ -139,7 +139,7 @@ sub extract_chapters {
             $content->load();
             $out .= warp_xhtml_to_html_section( $content->content_utf8() );
 
-            $out .= build_chapter_nav( $id, \@entries );
+            #$out .= build_chapter_nav( $id, \@entries );
             $out .= qq{    <p style="page-break-before: always"/> };
         }
     }
