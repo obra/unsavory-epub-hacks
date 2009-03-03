@@ -17,9 +17,18 @@ h2 { 'Your token is '.$u->token};
 p { Jifty->web->link( url => '/', label => 'foo')};
 
 p { outs( 'Visit ') ;
-    Jifty->web->link( label => Jifty->web->url ."setup/". $u->token.".mobi", url => "setup/". $u->token.".mobi") ;
+    Jifty->web->link( label => Jifty->web->url ."setup/". $u->token.".mobi", url => "/setup/". $u->token.".mobi") ;
     outs( " from your Kindle")};
-
+    p{
+    outs("Don't lose this URL: ". Jifty->web->link( label => 'My Kindleize Library', url => '/account/'.$u->token.'/home')); 
+    outs("Drag this bookmarklet to your bookmark bar: ");
+    my $add_url = Jifty->web->url."account/".$u->token.'/add/';
+    outs_raw(q[<a href="].
+        q[javascript:(function(){f='].$add_url.q['+window.location.href].
+        q[;a=function(){].
+        q[if(!window.open(f,'bookmark','location=yes,links=no,scrollbars=no,toolbar=no,width=550,height=550'))].
+        q[location.href=f};if(/Firefox/.test(navigator.userAgent)){setTimeout(a,0)}else{a()}})()">Kindleize!</a>]);
+    };
 };
 
 template 'account_library' => page {
