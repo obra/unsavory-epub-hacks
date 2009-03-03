@@ -94,7 +94,6 @@ my %file_to_nameref = ();
 
 my $linksinfo = MobiPerl::LinksInfo->new;
 
-my $mobifile = "t.mobi";
 
 my $config = MobiPerl::Config->new();
 $config->add_cover_link(1)              if defined $opt_addcoverlink;
@@ -109,9 +108,8 @@ $config->{KEEPBR} = 1 if defined $opt_keepbr;
 $config->{SCALEALLIMAGES} = $opt_scaleallimages if defined $opt_scaleallimages;
 
 my $filename = $filenames[0];
-$mobifile = $filename;
+my $mobifile = $filename;
 $mobifile =~ s/\.html?$/\.mobi/;
-
 if ( $#filenames == 0 ) {
     use File::Spec;
     my @dir = File::Spec->splitdir($filename);
