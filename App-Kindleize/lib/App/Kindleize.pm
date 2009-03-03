@@ -26,7 +26,7 @@ sub html_to_mobi {
     my $mobi = shift;
     my @args = ("$^X",$HTML2MOBI, "--mobifile", $mobi , $html);
     warn "outputting a mobi for $html to" . join( " ", @args);
-    system("(".join(' ',@args)."; rm $html) &");
+    system("(".join(' ',@args).") &");
     warn "ok";
 }
 1;
