@@ -28,6 +28,8 @@ use File::Spec;
 
 use HTML::TreeBuilder;
 
+our $MAX_SIZE = 300000;
+
 my $rescale_large_images = 1;
 
 sub is_cover_image {
@@ -79,7 +81,7 @@ sub get_tree_from_opf {
         opendir DIR, "." || die $!;
         my @files = readdir(DIR) || die $!;
         foreach my $f (@files) {
-            if ( $f =~ /\.(?:jpg|gif)$/i && MobiPerl::Util::is_cover_image($f) )
+            if ( $f =~ /\.(?:jpg|gif)$/i && is_cover_image($f) )
             {
                 $coverimage = $f;
             }
@@ -394,9 +396,7 @@ sub get_image_data {
 
     $rescale_large_images = $rescale if defined $rescale;
 
-    # pdurrant
-    # make maxsize exactly 60KiB
-    my $maxsize = 61440;
+    my $maxsize = $MAX_SIZE;
 
     my $maxwidth  = 480;
     my $maxheight = 640;
@@ -464,7 +464,7 @@ sub get_image_data {
     # so must use the --imagerescale argument to get 600x800.
 
     if ( defined $scale_factor and $scale_factor != 1.0 ) {
-        $p = MobiPerl::Util::scale_gd_image( $p, $scale_factor );
+        $p = scale_gd_image( $p, $scale_factor );
     }
 
     if ($rescale_large_images) {
@@ -473,25 +473,25 @@ sub get_image_data {
         if ( $ydiff > $xdiff ) {
             if ( $y > $maxheight ) {
                 my $scale = $maxheight * 1.0 / $y;
-                $p = MobiPerl::Util::scale_gd_image( $p, $scale );
+                $p = scale_gd_image( $p, $scale );
             }
         }
         else {
             if ( $x > $maxwidth ) {
                 my $scale = $maxwidth * 1.0 / $x;
-                $p = MobiPerl::Util::scale_gd_image( $p, $scale );
+                $p = scale_gd_image( $p, $scale );
             }
         }
     }
 
     my $quality = -1;
-    my $size = length( MobiPerl::Util::get_gd_image_data( $p, $filename ) );
+    my $size = length( get_gd_image_data( $p, $filename ) );
 
     if ( $size > $maxsize ) {
         $quality = 100;
         while (
             length(
-                MobiPerl::Util::get_gd_image_data( $p, $filename, $quality )
+                get_gd_image_data( $p, $filename, $quality )
             ) > $maxsize
             and $quality >= 0
           )
@@ -503,7 +503,7 @@ sub get_image_data {
         }
     }
 
-    $data = MobiPerl::Util::get_gd_image_data( $p, $filename, $quality );
+    $data = get_gd_image_data( $p, $filename, $quality );
     return $data;
 }
 
