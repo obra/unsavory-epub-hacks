@@ -38,7 +38,7 @@ sub is_cover_image {
     if ( not -e "$file" ) {
         die "ERROR: File does not exist: $file";
     }
-    my $p = new GD::Image($file);
+    my $p = GD::Image->new($file);
     if ( not defined $p ) {
         warn "Could not read image file: $file\n";
         return $res;
@@ -58,7 +58,7 @@ sub get_tree_from_opf {
     my $config    = shift;
     my $linksinfo = shift;
 
-    my $opf              = new MobiPerl::Opf($file);
+    my $opf              = MobiPerl::Opf->new($file);
     my $tochref          = $opf->get_toc_href();
     my @opf_spine_ids    = $opf->get_spine_ids();
     my @opf_manifest_ids = $opf->get_manifest_ids();
@@ -141,7 +141,7 @@ sub get_tree_from_opf {
 
     # Add TOC first also if --tocfirst
     if ( $tochref and $config->toc_first() ) {
-        my $tree = new HTML::TreeBuilder();
+        my $tree = HTML::TreeBuilder->new();
         $tree->ignore_unknown(0);
         $tree->parse_file($tochref) || die "1-Could not find file: $tochref\n";
         $linksinfo->check_for_links($tree);
@@ -158,7 +158,7 @@ sub get_tree_from_opf {
 
         next unless ( $mediatype =~ /text/ );    # only include text content
 
-        my $tree = new HTML::TreeBuilder();
+        my $tree = HTML::TreeBuilder->new();
         $tree->ignore_unknown(0);
 
         open FILE, "<$filename" or die "2-Could not find file: $filename\n";
@@ -298,7 +298,7 @@ sub get_thumb_cover_image_data {
         return $data;
     }
 
-    my $p = new GD::Image("$filename");
+    my $p = GD::Image->new("$filename");
     my ( $x, $y ) = $p->getBounds();
 
     # pdurrant
@@ -319,7 +319,7 @@ sub scale_gd_image {
         $w1 = $x;
         $h1 = $y;
     }
-    my $res = new GD::Image( $w1, $h1 );
+    my $res = GD::Image->new( $w1, $h1 );
     $res->copyResized( $im, 0, 0, 0, 0, $w1, $h1, $w0, $h0 );
     return $res;
 }
@@ -352,14 +352,9 @@ sub get_gd_image_data {
 
     $quality = -1 if not defined $quality;
 
-    #
     # For some strange reason it does not work if using
     # the gif file with size 600x800
-    #
 
-##    if ($filename =~ /\.gif/ or $filename =~ /\.GIF/) {
-##	return $im->gif ();
-##    }
 
     if ( $quality <= 0 ) {
         return $im->jpeg();
@@ -432,14 +427,14 @@ sub get_image_data {
         return $data;
     }
 
-    my $p = new GD::Image("$filename");
+    my $p = GD::Image->new("$filename");
     if ( not defined $p ) {
-        my $im = new Image::BMP( file => "$filename" );
+        my $im = Image::BMP->new( file => "$filename" );
         if ( defined $im ) {
             my $w = $im->{Width};
             my $h = $im->{Height};
             print STDERR "BMP IMAGE $filename: $w x $h\n";
-            $p = new GD::Image( $w, $h );
+            $p = GD::Image->new( $w, $h );
             foreach my $x ( 0 .. $w - 1 ) {
                 foreach my $y ( 0 .. $h - 1 ) {
                     my ( $r, $g, $b ) = $im->xy_rgb( $x, $y );
@@ -520,7 +515,6 @@ sub iso2hex($) {
 }
 
 sub mobipocket_page_breaks {
-
     my $tree        = shift;
     my @paras       = $tree->find("p");
     my $inside_para = 0;
