@@ -24,6 +24,7 @@ package Text::ePub::genMobi;
 use File::Temp qw/tempdir/;
 use lib 'lib';
 use Text::ePub::Parser;
+use Text::ePub::HTMLContent;
 use Getopt::Long;
 
 use MobiPerl::MobiFile;
@@ -127,21 +128,26 @@ sub flatten_toc {
 
 sub extract_chapters {
     my $parser  = shift;
+	my $spine = $parser->manifest->spine;
     my @entries = flatten_toc( $parser->toc->entries );
     my $out     = '<a name="chapters"></a>';
-    for my $id ( 0 .. ($#entries) ) {
-        $out .= qq{<a name="@{[$entries[$id]->{id}]}"><!-- Chapter --></a>};
-        if ( my $filename = $entries[$id]->{file} ) {
+
+	my %navpoints = map { $_->{file} => $_ } @entries;
+	for my $item (@$spine) {
+		my $href = $parser->manifest->content->{$item}->{href};
+		my $navpoint = $navpoints{$href}->{id};
+		if ($navpoint) {
+			$out .= qq{<a name="@{[$navpoint]}"><!-- Chapter --></a>};
+		}
             my $content = Text::ePub::HTMLContent->new(
                 epub     => $parser,
-                filename => $parser->content_prefix . $filename
+                filename => $parser->content_prefix . $href
             );
             $content->load();
             $out .= warp_xhtml_to_html_section( $content->content_utf8() );
 
             #$out .= build_chapter_nav( $id, \@entries );
             $out .= qq{    <p style="page-break-before: always"/> };
-        }
     }
     return $out;
 }

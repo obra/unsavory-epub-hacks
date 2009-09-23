@@ -113,6 +113,7 @@ sub build_chapter_nav {
 sub generate_toc {
     my $parser = shift;
 
+	warn YAML::Dump($parser->toc->entries); use YAML;
     my $out = q{<div id="toc"><a name="contents"><h2>Table of contents</h2></a>}.
        sub_toc ($parser->toc->entries)
        ."</div>";
