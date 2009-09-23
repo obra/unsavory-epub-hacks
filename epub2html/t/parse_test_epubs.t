@@ -4,6 +4,7 @@ use warnings;
 use Test::More;
 use File::Find;
 use Text::ePub::Parser;
+use Text::ePub::HTMLContent;
 
 my @test_files;
 
