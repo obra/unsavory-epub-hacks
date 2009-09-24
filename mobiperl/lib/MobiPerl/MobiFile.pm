@@ -94,16 +94,12 @@ sub save_mobi_file {
     $header->{'recsize'} = $header->{'length'}
       if $header->{'length'} < DOC_RECSIZE;
 
-    #
     # pack the Palm Doc  header
-    #
     $header->{'data'} = pack( 'n xx N n n N',
         $header->{'version'}, $header->{'length'}, $header->{'records'},
         $header->{'recsize'}, 0 );
 
-    #
     # Add MOBI header
-    #
 
     my $mh = MobiPerl::MobiHeader->new();
     $mh->set_title($title);
@@ -193,14 +189,12 @@ sub save_mobi_file {
     # End from Doc.pm
     #
 
-    if ( not $config->no_images() ) {
+    unless ( $config->no_images() ) {
         for my $i ( 1 .. $linksinfo->get_record_index() ) {
             my $filename = $linksinfo->get_image_file($i);
-##	    print STDERR "New record for image $current_record_index: $filename\n";
-
-            #
+            
             # Is it really correct to assign id and categori?
-            #
+           
             my $img = Palm::PDB->new_Record();
             $img->{"categori"}            = 0;
             $img->{"attributes"}{"Dirty"} = 1;
@@ -214,15 +208,11 @@ sub save_mobi_file {
 
         my $coverimage = $config->cover_image();
 
-        #
         # This will not work since EXTH information not set
-        #
 
-        #
         # Adding thumb for Cybook does not seem to be neccessary.
         # To automatically add the first image seems wrong...
         # So functionality disabled for now.
-        #
 
         if ( $coverimage and 0 ) {
             my $img = Palm::PDB->new_Record();
