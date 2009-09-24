@@ -45,13 +45,6 @@ Getopt::Mixed::getOptions ("title=s author=s htmlfile=s mobifile=s
 
 
 
-#my @args = map { s/\s/\\ /g; $_ } @ARGV;
-
-#my $command = "html2mobi " . join " ", @args;
-#print STDERR "Command: $command\n";
-#system ($command) == 0 or die "system ($command) failed: $!\n";
-
-
 my $filename = shift;
 
 if (not $filename) {
@@ -73,11 +66,11 @@ EOF
 }
 
 
-if (not $filename =~ /\.opf$/) {
-    die "File $filename has wrong extension\n";
+unless ($filename =~ /\.(?:opf|epub)$/) {
+    die "File $filename has wrong extension. It needs to be either .opf or .epub\n";
 }
 
-my $config = new MobiPerl::Config;
+my $config = MobiPerl::Config->new();
 $config->add_cover_link (1) if defined $opt_addcoverlink;
 $config->toc_first (1) if defined $opt_tocfirst;
 $config->no_images (1) if defined $opt_noimages;
@@ -87,11 +80,8 @@ $config->title ($opt_title);
 $config->prefix_title ($opt_prefixtitle);
 
 my ($vol,$dir,$basefile) = File::Spec->splitpath ($filename);
-print STDERR "OPFFILE: $vol - $dir - $basefile\n";
 
 my $cwd = getcwd;
-
-print STDERR "CURRENTDIR:$cwd\n";
 
 
 if ("$vol$dir" ne "") {
@@ -100,7 +90,7 @@ if ("$vol$dir" ne "") {
 
 my $mobifile = $basefile;
 
-$mobifile =~ s/\.opf/\.mobi/;
+$mobifile =~ s/\.(?:opf|epub)/\.mobi/;
 $mobifile = $opt_mobifile if defined $opt_mobifile;
 
 if ($mobifile eq $basefile) {
@@ -110,7 +100,7 @@ if ($mobifile eq $basefile) {
 my $rescaleimages = $MobiPerl::Util::rescale_large_images;
 $rescaleimages = $opt_imagerescale if defined $opt_imagerescale;
 
-my $linksinfo = new MobiPerl::LinksInfo;
+my $linksinfo = MobiPerl::LinksInfo->new();
 
 my $tree = MobiPerl::Util::get_tree_from_opf ($basefile, $config, $linksinfo);
 
@@ -120,8 +110,7 @@ if (defined $opt_htmlfile) {
     close HTML;
 }
 
-MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config,
-				    $rescaleimages);
+MobiPerl::MobiFile::save_mobi_file ($tree, $mobifile, $linksinfo, $config, $rescaleimages);
 
 
 move("$mobifile", "$cwd");
