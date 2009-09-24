@@ -1,6 +1,6 @@
+package MobiPerl::MobiFile;
 use warnings;
 use strict;
-package MobiPerl::MobiFile;
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
 #
@@ -28,8 +28,6 @@ use MobiPerl::Util;
 use constant DOC_UNCOMPRESSED => scalar 1;
 use constant DOC_COMPRESSED   => scalar 2;
 use constant DOC_RECSIZE      => scalar 4096;
-
-use strict;
 
 sub save_mobi_file {
     my $html      = shift;
@@ -107,7 +105,7 @@ sub save_mobi_file {
     # Add MOBI header
     #
 
-    my $mh = new MobiPerl::MobiHeader;
+    my $mh = MobiPerl::MobiHeader->new();
     $mh->set_title($title);
     $mh->set_author($author);
     $mh->set_image_record_index($current_record_index);
@@ -240,4 +238,4 @@ sub save_mobi_file {
     $mobi->Write($filename);
 }
 
-return 1;
+1;
