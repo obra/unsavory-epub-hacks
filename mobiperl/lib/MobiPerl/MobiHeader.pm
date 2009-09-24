@@ -339,7 +339,8 @@ sub new {
     bless {
         TYPE             => 2,
         VERSION          => 4,
-        CODEPAGE         => 1252,
+		#CODEPAGE         => 1252,
+		CODEPAGE         => 65001,
         TITLE            => "Unspecified Title",
         AUTHOR           => "Unspecified Author",
         PUBLISHER        => "",
