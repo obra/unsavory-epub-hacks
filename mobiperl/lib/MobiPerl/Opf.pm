@@ -129,19 +129,14 @@ sub initialize_from_file {
     my $self     = shift;
     my $filename = shift;
 
-    print STDERR "Opf: Initialize from file: $filename\n";
-
     open OPF, "<$filename" or die "Could not open opf file: $filename\n";
     local $/;
     my $content = <OPF>;
-
-    print STDERR "CONTENT: $content\n";
 
     my $tree_parser = XML::Parser::Lite::Tree::instance();
     my $opf         = $tree_parser->parse($content);
     $self->set_opf($opf);
 
-    #    print STDERR Dumper($opf);
 
     my $title = opf_get_title($opf);
 
