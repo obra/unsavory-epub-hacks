@@ -78,7 +78,7 @@ sub save_mobi_file {
     $header->{'records'} = 0;
     $header->{'recsize'} = DOC_RECSIZE;
 
-    my $body = $html->as_HTML();
+    my $body = $html->as_HTML('');
     my $current_record_index = 1;
 
     # break the document into record-sized chunks
