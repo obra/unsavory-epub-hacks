@@ -14,22 +14,25 @@ sub load {
 
 sub content_utf8 {
     my $self = shift;
-                 use Encode::Guess;
-                use Encode;
-             # perhaps ok
+    use Encode::Guess;
+    use Encode;
+
+    # perhaps ok
     my $data = $self->raw_content();
 
-             my $decoder = guess_encoding($data, 'cp1252', 'latin1');
-             # definitely NOT ok
-        if  (ref($decoder) ) {
-            my $utf8 = $decoder->decode($data);
-            return $utf8;
-        } elsif ($data =~ /^“/m && $data =~ /”$/m) {
-                 # if the ebook has ""ed paragraphs in latin 1, it's probably in latin 1.
-                return decode('utf-8',$data);
-            } else {
-            return $data;
-            }
+    my $decoder = guess_encoding( $data, 'cp1252', 'latin1' );
+
+    # definitely NOT ok
+    if ( ref($decoder) ) {
+        my $utf8 = $decoder->decode($data);
+        return $utf8;
+    } elsif ( $data =~ /^“/m && $data =~ /”$/m ) {
+
+        # if the ebook has ""ed paragraphs in latin 1, it's probably in latin 1.
+        return decode( 'utf-8', $data );
+    } else {
+        return $data;
+    }
 }
 
 no Mouse;
