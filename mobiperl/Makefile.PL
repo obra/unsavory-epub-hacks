@@ -3,6 +3,7 @@ use inc::Module::Install;
 all_from ('lib/MobiPerl.pm');
 requires(Date::Format => 0,
 Date::Parse => 0,
+Mouse => 0.28,
 Encode => 0,
 GD => 0,
 Getopt::Mixed => 0,

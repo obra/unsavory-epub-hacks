@@ -3,7 +3,7 @@ use strict;
 
 package MobiPerl::Config;
 
-use Any::Moose;
+use Mouse;
 
 
 #    Copyright (C) 2007 Tommy Persson, tpe@ida.liu.se
